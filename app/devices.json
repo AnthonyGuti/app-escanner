@@ -1,0 +1,14 @@
+{
+  "ejercicio1": {
+    "titulo": "IQ vs Calificaciones",
+    "descripcion": "Relación entre coeficiente intelectual y calificaciones finales.",
+    "iq": [110,112,118,119,122,125,127,130,132,134,136,138],
+    "calificaciones": [1,1.6,1.2,2.1,2.6,1.8,2.6,2,3.2,2.6,3,3.6]
+  },
+  "ejercicio2": {
+  "titulo": "Ansiedad vs Examen Final",
+  "descripcion": "Relación entre nivel de ansiedad y calificación en el examen final.",
+  "ansiedad": [28, 41, 35, 39, 31, 42, 50, 46, 45, 67],
+  "notas": [82, 58, 63, 89, 92, 64, 55, 70, 51, 72]
+}
+}

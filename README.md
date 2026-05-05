@@ -1,50 +1,73 @@
-# Welcome to your Expo app 👋
+# AppRA: Realidad Aumentada aplicada a la Estadística
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+**AppRA** es una aplicación móvil desarrollada para la **Universidad Indoamérica**, diseñada para facilitar el aprendizaje de la **Regresión Lineal Simple**. Utiliza tecnología 3D y Realidad Aumentada para visualizar datos estadísticos de forma interactiva, permitiendo una comprensión profunda de los modelos predictivos.
 
-## Get started
+---
 
-1. Install dependencies
+## Características Principales
 
-   ```bash
-   npm install
-   ```
+* **Módulo de Teoría**: Explicación clara y sencilla de los fundamentos matemáticos y la ecuación de la recta (y = mx + b).
+* **Escáner QR**: Carga de conjuntos de datos mediante códigos QR dinámicos que vinculan a estructuras JSON.
+* **Visualización 3D**: Gráficos animados en tiempo real utilizando Three.js y Expo-GL para representar la dispersión de datos.
+* **Cálculo Automático**: Generación instantánea de la línea de mejor ajuste mediante el método de mínimos cuadrados.
 
-2. Start the app
+---
 
-   ```bash
-   npx expo start
-   ```
+## Tecnologías Utilizadas
 
-In the output, you'll find options to open the app in a
+* **React Native & Expo**: Framework principal para el desarrollo de la aplicación.
+* **Three.js / Expo-Three**: Motor de renderizado para los gráficos estadísticos en 3D.
+* **Expo Camera**: Implementación de la interfaz de cámara para el escaneo de ejercicios.
+* **TypeScript**: Lenguaje de programación para garantizar la robustez de la lógica y los cálculos.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+---
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## Instrucciones de Instalación y Ejecución
 
-## Get a fresh project
+Siga estos pasos para configurar el entorno de desarrollo y ejecutar la aplicación correctamente:
 
-When you're ready, run:
+### Pre-requisitos
 
-```bash
-npm run reset-project
-```
+* Tener instalado [Node.js](https://nodejs.org/) (Versión LTS recomendada).
+* Tener instalada la aplicación **Expo Go** en su dispositivo móvil.
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### Instalación de Dependencias
 
-## Learn more
+Es fundamental seguir este orden para evitar conflictos entre las librerías de realidad aumentada y el motor 3D:
 
-To learn more about developing your project with Expo, look at the following resources:
+1.  **Clonar el repositorio**:
+    ```bash
+    git clone [https://github.com/TU_USUARIO/nombre-de-tu-repo.git](https://github.com/TU_USUARIO/nombre-de-tu-repo.git)
+    ```
+2.  **Entrar a la carpeta del proyecto**:
+    ```bash
+    cd AppRA
+    ```
+3.  **Instalar paquetes con flag de compatibilidad**:
+    Este paso asegura que las dependencias de Three.js y Expo se instalen correctamente a pesar de las restricciones de versiones entre pares:
+    ```bash
+    npm install --legacy-peer-deps
+    ```
+4.  **Instalar dependencias nativas faltantes (opcional)**:
+    Si el entorno reporta falta de librerías de sistema, ejecute:
+    ```bash
+    npx expo install expo-asset expo-file-system expo-camera expo-gl
+    ```
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+### Ejecución
 
-## Join the community
+1.  **Iniciar el servidor de desarrollo**:
+    ```bash
+    npx expo start
+    ```
+2.  **Vincular con dispositivo móvil**:
+    Escanee el código QR que aparecerá en su terminal utilizando la cámara de su celular o la aplicación **Expo Go**.
 
-Join our community of developers creating universal apps.
+---
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Contexto Académico
+
+Este proyecto forma parte del desarrollo práctico para la materia de Estadística en la Universidad Indoamérica. Se enfoca en la innovación educativa mediante el uso de herramientas tecnológicas modernas para la visualización de datos complejos.
+
+**Autor**: Anthony Gutierrez  
+**Institución**: Universidad Indoamérica
