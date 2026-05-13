@@ -9,11 +9,21 @@ export default function Graph3D({ xData, yData, setLockScroll }: any) {
   const startRotation = useRef({ x: 0, y: 0 });
   const zoom = useRef(28);
   const lastDistance = useRef<number | null>(null);
-  
-  // Ref para controlar el progreso de la animación (0 a 1)
   const animProgress = useRef(0);
 
-  // Reiniciar animación si cambian los datos
+  // ── FIX 1: cancelar el loop al salir del módulo ────────────────────────
+  const rafHandle = useRef<number>(0);
+  const mounted = useRef(true);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      cancelAnimationFrame(rafHandle.current);
+    };
+  }, []);
+  // ───────────────────────────────────────────────────────────────────────
+
   useEffect(() => {
     animProgress.current = 0;
   }, [xData, yData]);
@@ -53,20 +63,21 @@ export default function Graph3D({ xData, yData, setLockScroll }: any) {
     const mat = new THREE.MeshBasicMaterial({ color: 0x00f2ff });
     if (type === 'X') {
       const geo = new THREE.BoxGeometry(0.2, 1.3, 0.2);
-      const b1 = new THREE.Mesh(geo, mat); b1.rotation.z = Math.PI/4;
-      const b2 = new THREE.Mesh(geo, mat); b2.rotation.z = -Math.PI/4;
+      const b1 = new THREE.Mesh(geo, mat); b1.rotation.z = Math.PI / 4;
+      const b2 = new THREE.Mesh(geo, mat); b2.rotation.z = -Math.PI / 4;
       group.add(b1, b2);
     } else if (type === 'Y') {
-      const arcGeo = new THREE.TorusGeometry(0.5, 0.1, 8, 16, Math.PI);
-      const cup = new THREE.Mesh(arcGeo, mat); cup.rotation.z = Math.PI; cup.position.y = 0.3;
-      const stem = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.8, 0.2), mat); stem.position.y = -0.3;
-      group.add(cup, stem);
+      const armGeo = new THREE.BoxGeometry(0.2, 0.8, 0.2);
+      const lA = new THREE.Mesh(armGeo, mat); lA.position.set(-0.3, 0.4, 0); lA.rotation.z = Math.PI / 4;
+      const rA = new THREE.Mesh(armGeo, mat); rA.position.set(0.3, 0.4, 0); rA.rotation.z = -Math.PI / 4;
+      const st = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.7, 0.2), mat); st.position.y = -0.2;
+      group.add(lA, rA, st);
     } else if (type === 'Z') {
       const bar = new THREE.BoxGeometry(1.1, 0.2, 0.2);
-      const t = new THREE.Mesh(bar, mat); t.position.y = 0.55;
-      const d = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.4, 0.2), mat); d.rotation.z = Math.PI/4;
-      const b = new THREE.Mesh(bar, mat); b.position.y = -0.55;
-      group.add(t, d, b);
+      const t = new THREE.Mesh(bar, mat); t.position.y = 0.5;
+      const b = new THREE.Mesh(bar, mat); b.position.y = -0.5;
+      const d = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.4, 0.2), mat); d.rotation.z = Math.PI / 3.5;
+      group.add(t, b, d);
     }
     return group;
   };
@@ -81,14 +92,23 @@ export default function Graph3D({ xData, yData, setLockScroll }: any) {
           renderer.setClearColor(0x000000, 0);
 
           const scene = new THREE.Scene();
-          const camera = new THREE.PerspectiveCamera(75, gl.drawingBufferWidth / gl.drawingBufferHeight, 0.1, 1000);
+          const camera = new THREE.PerspectiveCamera(
+            75,
+            gl.drawingBufferWidth / gl.drawingBufferHeight,
+            0.1,
+            1000
+          );
           camera.position.set(0, 0, 40);
           scene.add(new THREE.AmbientLight(0xffffff, 1.5));
-
           scene.add(new THREE.GridHelper(20, 20, 0x444444, 0x222222));
-          
-          const axis = (pts: any, col: number) => {
-            scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: col })));
+
+          const axis = (pts: THREE.Vector3[], col: number) => {
+            scene.add(
+              new THREE.Line(
+                new THREE.BufferGeometry().setFromPoints(pts),
+                new THREE.LineBasicMaterial({ color: col })
+              )
+            );
           };
           axis([new THREE.Vector3(-10, 0, 0), new THREE.Vector3(10, 0, 0)], 0xff3b30);
           axis([new THREE.Vector3(0, -10, 0), new THREE.Vector3(0, 10, 0)], 0x34c759);
@@ -98,66 +118,86 @@ export default function Graph3D({ xData, yData, setLockScroll }: any) {
           const ly = createBlockLabel('Y'); ly.position.set(0.5, 11, 0); scene.add(ly);
           const lz = createBlockLabel('Z'); lz.position.set(0, 0.5, 11); scene.add(lz);
 
-          // Lógica de datos
+          // ── FIX 2: rangos seguros para 0, 1 o muchos puntos ─────────────
           const n = xData.length;
-          const sumX = xData.reduce((a: any, b: any) => a + b, 0);
-          const sumY = yData.reduce((a: any, b: any) => a + b, 0);
-          const sumXY = xData.reduce((a: any, v: any, i: any) => a + v * yData[i], 0);
-          const sumX2 = xData.reduce((a: any, v: any) => a + v * v, 0);
-          const m = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
-          const b = (sumY - m * sumX) / n;
-          const minX = Math.min(...xData), rX = Math.max(...xData) - minX || 1;
-          const minY = Math.min(...yData), rY = Math.max(...yData) - minY || 1;
+
+          // Con 0 puntos usamos rango dummy; con 1 punto forzamos rango de 2
+          const minX = n > 0 ? Math.min(...xData) : -1;
+          const maxX = n > 0 ? Math.max(...xData) : 1;
+          const minY = n > 0 ? Math.min(...yData) : -1;
+          const maxY = n > 0 ? Math.max(...yData) : 1;
+
+          // rX/rY nunca son 0 → evita divisiones por cero y puntos superpuestos
+          const rX = (maxX - minX) || 2;
+          const rY = (maxY - minY) || 2;
+
           const sx = (v: number) => ((v - minX) / rX) * 12 - 6;
           const sy = (v: number) => ((v - minY) / rY) * 12 - 6;
+          // ────────────────────────────────────────────────────────────────
 
-          // Puntos estáticos
-          xData.forEach((x: any, i: number) => {
-            const p = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 8), new THREE.MeshBasicMaterial({ color: 0xff2d75 }));
+          // ── FIX 3: regresión solo con ≥2 puntos y denominador válido ────
+          let m = 0, bCoef = 0, canDrawLine = false;
+          if (n >= 2) {
+            const sumX  = xData.reduce((a: number, v: number) => a + v, 0);
+            const sumY  = yData.reduce((a: number, v: number) => a + v, 0);
+            const sumXY = xData.reduce((a: number, v: number, i: number) => a + v * yData[i], 0);
+            const sumX2 = xData.reduce((a: number, v: number) => a + v * v, 0);
+            const denom = n * sumX2 - sumX * sumX;
+            if (denom !== 0) {
+              m      = (n * sumXY - sumX * sumY) / denom;
+              bCoef  = (sumY - m * sumX) / n;
+              canDrawLine = isFinite(m) && isFinite(bCoef);
+            }
+          }
+          // ────────────────────────────────────────────────────────────────
+
+          // Puntos — se muestran todos desde el primero
+          xData.forEach((x: number, i: number) => {
+            const p = new THREE.Mesh(
+              new THREE.SphereGeometry(0.3, 8, 8),
+              new THREE.MeshBasicMaterial({ color: 0xff2d75 })
+            );
             p.position.set(sx(x), sy(yData[i]), 0);
             scene.add(p);
           });
 
-          // 📈 RECTA ANIMADA
+          // Recta animada (solo si hay regresión válida)
           const lineGeometry = new THREE.BufferGeometry();
           const lineMaterial = new THREE.LineBasicMaterial({ color: 0x00ff88, linewidth: 3 });
           const animatedLine = new THREE.Line(lineGeometry, lineMaterial);
-          scene.add(animatedLine);
+          if (canDrawLine) scene.add(animatedLine);
 
+          // ── FIX 4: loop con guarda de desmontaje ───────────────────────
           const render = () => {
-            requestAnimationFrame(render);
-            
-            // 1. Animación de la recta
-            if (animProgress.current < 1) {
-              animProgress.current += 0.01; // Velocidad de la animación
-              const currentPoints = [];
+            if (!mounted.current) return; // componente desmontado → para el loop
+            rafHandle.current = requestAnimationFrame(render);
+
+            if (canDrawLine && animProgress.current < 1) {
+              animProgress.current += 0.01;
+              const currentPoints: THREE.Vector3[] = [];
               const steps = 20;
               const limit = Math.floor(steps * animProgress.current);
-              
               for (let i = 0; i <= limit; i++) {
                 const xv = minX + (rX * i) / steps;
-                currentPoints.push(new THREE.Vector3(sx(xv), sy(m * xv + b), 0));
+                currentPoints.push(new THREE.Vector3(sx(xv), sy(m * xv + bCoef), 0));
               }
-              if (currentPoints.length > 1) {
-                lineGeometry.setFromPoints(currentPoints);
-              }
+              if (currentPoints.length > 1) lineGeometry.setFromPoints(currentPoints);
             }
 
-            // 2. Movimiento de cámara y rotación
             camera.position.z += (zoom.current - camera.position.z) * 0.1;
             camera.lookAt(0, 0, 0);
             scene.rotation.x = rotation.current.x;
             scene.rotation.y = rotation.current.y;
-            
-            // Billboard etiquetas
-            lx.rotation.y = -rotation.current.y;
-            ly.rotation.y = -rotation.current.y;
-            lz.rotation.y = -rotation.current.y;
-            
+
+            [lx, ly, lz].forEach(label => {
+              label.rotation.set(-rotation.current.x, -rotation.current.y, 0);
+            });
+
             renderer.render(scene, camera);
             gl.endFrameEXP();
           };
           render();
+          // ────────────────────────────────────────────────────────────────
         }}
       />
     </View>
