@@ -1,8 +1,8 @@
-// 1. Importamos las funciones de la App
-import { FirebaseApp, getApp, getApps, initializeApp } from "firebase/app";
-// 2. Importamos las funciones y el tipo de dato de Firestore
-import { Firestore, getFirestore, initializeFirestore } from "firebase/firestore";
+import { getApp, getApps, initializeApp } from 'firebase/app';
+// Añadimos 'Firestore' en las importaciones para poder usarlo como tipo
+import { Firestore, getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
 
+// Tus credenciales reales de Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyAzWrIpnynWUH7lwrIGKYM9JVCtvNn6C38",
   authDomain: "appra-estadistica.firebaseapp.com",
@@ -12,20 +12,26 @@ const firebaseConfig = {
   appId: "1:527014383641:web:4937316db22d9d2e031a88"
 };
 
-// Inicializamos la App (evitando duplicados)
-const app: FirebaseApp = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+// Inicializamos la aplicación de Firebase de forma segura (evita duplicados en Expo)
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-// Definimos 'db' con el tipo Firestore para que TypeScript esté feliz
+// LE DECIMOS A TYPESCRIPT QUE 'db' SERÁ UNA INSTANCIA DE FIRESTORE:
 let db: Firestore;
 
 try {
-  // Intentamos la configuración con Long Polling para tu Android
-  db = initializeFirestore(app, {
-    experimentalForceLongPolling: true,
-  });
-} catch (e) {
-  // Si ya existe, simplemente la recuperamos
+  if (getApps().length > 0 && getFirestore(app)) {
+    db = getFirestore(app);
+  } else {
+    db = initializeFirestore(app, {
+      localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager()
+      })
+    });
+  }
+} catch (error) {
+  // Si da error la verificación, recuperamos la instancia que ya existe
   db = getFirestore(app);
 }
 
-export { db };
+// Exportamos 'db' listo y perfectamente tipado
+export { app, db };

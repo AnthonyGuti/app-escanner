@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AppRA - Indoamérica Login</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --morado-indo: #51007a;   /* El morado violeta exacto de tu imagen */
+            --morado-oscuro: #2b0042; /* Tono oscuro para el fondo degradado */
+            --naranja-indo: #e85a06;  /* Naranja institucional */
+        }
+        body {
+            background: linear-gradient(135deg, var(--morado-oscuro) 0%, #150021 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        .card-indo {
+            background: #ffffff;
+            border-top: 6px solid var(--naranja-indo);
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+        }
+        .btn-indo {
+            background-color: var(--morado-indo);
+            color: white;
+            font-weight: 700;
+            border: none;
+            padding: 12px;
+            transition: all 0.3s;
+        }
+        .btn-indo:hover {
+            background-color: var(--naranja-indo);
+            color: white;
+            transform: translateY(-2px);
+        }
+        /* Contenedor del logo con el borde blanco rectangular exacto de tu diseño */
+        .logo-box {
+            background: #ffffff;
+            padding: 8px;
+            border-radius: 8px;
+            display: inline-block;
+            margin-bottom: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .logo-img {
+            max-width: 250px;
+            height: auto;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-5 col-lg-4 text-center">
+            
+            <div class="logo-box">
+                <img src="../assets/images/logo.jpeg" alt="Universidad Indoamérica" class="logo-img">
+            </div>
+            
+            <div class="card card-indo p-4 text-start">
+                <div class="mb-4">
+                    <h4 class="fw-bold m-0" style="color: var(--morado-indo);">Iniciar Sesión</h4>
+                    <small class="text-muted">Plataforma Administrativa AppRA</small>
+                </div>
+                
+                <form id="loginForm">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-secondary">Correo Electrónico</label>
+                        <input type="email" class="form-control" id="email" required placeholder="ejemplo@indoamerica.edu.ec">
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold text-secondary">Contraseña</label>
+                        <input type="password" class="form-control" id="password" required placeholder="••••••••">
+                    </div>
+                    <button type="submit" class="btn btn-indo w-100 shadow-sm">INGRESAR AL PANEL</button>
+                </form>
+                
+                <div id="errorMessage" class="alert alert-danger mt-3 d-none small text-center" role="alert"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { firebaseConfig } from "./config.js";
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        const errorDiv = document.getElementById('errorMessage');
+        errorDiv.classList.add('d-none');
+
+        try {
+            await signInWithEmailAndPassword(auth, email, password);
+            window.location.href = "panel.html";
+        } catch (error) {
+            errorDiv.classList.remove('d-none');
+            errorDiv.innerText = "Error: Credenciales no válidas.";
+        }
+    });
+</script>
+</body>
+</html>

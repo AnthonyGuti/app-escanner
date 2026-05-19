@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AppRA - Panel Indoamérica</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        :root { 
+            --morado-indo: #51007a; 
+            --naranja-indo: #e85a06; 
+            --fondo-gris: #f5f2f7;
+        }
+        body { background-color: var(--fondo-gris); font-family: 'Segoe UI', sans-serif; }
+        
+        /* Barra de navegación principal */
+        .navbar-indo { 
+            background-color: var(--morado-indo); 
+            border-bottom: 5px solid var(--naranja-indo); 
+        }
+        .card-header-indo { 
+            background-color: var(--morado-indo); 
+            color: white; 
+            font-weight: bold; 
+        }
+        .btn-naranja { 
+            background-color: var(--naranja-indo); 
+            color: white; 
+            font-weight: bold; 
+            border: none; 
+        }
+        .btn-naranja:hover { 
+            background-color: #c94d03; 
+            color: white; 
+        }
+        
+        /* Ajuste del logo rectangular en la barra superior */
+        .logo-nav { 
+            height: 45px; 
+            margin-right: 15px; 
+            background: #ffffff; 
+            border-radius: 6px; 
+            padding: 4px 8px; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        /* =========================
+            MODO OSCURO
+            ========================= */
+
+            .dark-mode {
+                background-color: #0f172a !important;
+                color: white !important;
+            }
+
+            .dark-mode .card {
+                background-color: #1e293b !important;
+                color: white !important;
+            }
+
+            .dark-mode .card-body {
+                background-color: #1e293b !important;
+            }
+
+            .dark-mode .form-control {
+                background-color: #0f172a !important;
+                border-color: #334155 !important;
+                color: white !important;
+            }
+
+            .dark-mode .form-control::placeholder {
+                color: #94a3b8 !important;
+            }
+
+            .dark-mode .table {
+                color: white !important;
+            }
+
+            .dark-mode .table-custom thead {
+                background-color: #1e293b !important;
+            }
+
+            .dark-mode td {
+                background-color: #111827 !important;
+                color: white !important;
+            }
+
+            .dark-mode .text-secondary,
+            .dark-mode .form-label {
+                color: #cbd5e1 !important;
+            }
+
+            .dark-mode .btn-outline-morado {
+                border-color: #c084fc !important;
+                color: #c084fc !important;
+            }
+
+            .dark-mode .btn-outline-morado:hover {
+                background-color: #c084fc !important;
+                color: black !important;
+            }
+        
+        #qrcode img { margin: 0 auto; border: 8px solid white; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .table-custom thead { background-color: var(--morado-indo); color: white; }
+        .btn-outline-morado { border-color: var(--morado-indo); color: var(--morado-indo); }
+        .btn-outline-morado:hover { background-color: var(--morado-indo); color: white; }
+    </style>
+     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+</head>
+<body>
+
+<nav class="navbar navbar-dark navbar-indo mb-4 shadow">
+    <div class="container-fluid px-4">
+
+        <a class="navbar-brand d-flex align-items-center fw-bold" href="#">
+            <img src="../assets/images/logo.jpeg" alt="Logo" class="logo-nav">
+            Panel de Control - AppRA Estadística
+        </a>
+
+        <div class="d-flex gap-2">
+
+            <button 
+                class="btn btn-dark btn-sm px-3"
+                onclick="toggleDarkMode()"
+            >
+                🌙 Modo Oscuro
+            </button>
+
+            <button 
+                class="btn btn-naranja btn-sm px-3" 
+                id="btnCerrarSesion"
+            >
+                Cerrar Sesión
+            </button>
+
+        </div>
+
+    </div>
+</nav>
+
+<div class="container-fluid px-4">
+    <div class="row">
+        <div class="col-lg-4">
+            <div class="card shadow-sm mb-4 border-0">
+                <div class="card-header card-header-indo" id="formTitle">Nuevo Ejercicio Estadístico</div>
+                <div class="card-body p-4" style="background-color: #ffffff;">
+                    <form id="ejercicioForm">
+                        <input type="hidden" id="editId">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-secondary">ID del QR (Sin espacios)</label>
+                            <input type="text" class="form-control" id="id_enunciado" required placeholder="ej: ejercicio#">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-secondary">Enunciado del Problema</label>
+                            <textarea class="form-control" id="enunciado_completo" rows="4" required placeholder="Escriba el problema aquí..."></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-secondary">Datos X (Separados por comas)</label>
+                            <input type="text" class="form-control" id="datos_x" required placeholder="1, 2, 3, 4">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-secondary">Datos Y (Separados por comas)</label>
+                            <input type="text" class="form-control" id="datos_y" required placeholder="10, 20, 30, 40">
+                        </div>
+                        <button type="submit" class="btn btn-naranja w-100 py-2" id="btnGuardar">Guardar y Generar QR</button>
+                        <button type="button" class="btn btn-secondary w-100 mt-2 d-none" id="btnCancelarEdicion">Cancelar Edición</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card shadow-sm border-0 text-center d-none" id="qrContainer">
+                <div class="card-body p-4">
+                    <h6 class="fw-bold mb-3" style="color: var(--morado-indo);">QR LISTO PARA DESCARGAR</h6>
+                    <div id="qrcode" class="mb-3"></div>
+                    <button class="btn btn-success w-100 fw-bold" id="btnDescargarQR">DESCARGAR PNG</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="card shadow-sm border-0">
+                <div class="card-header card-header-indo">Base de Ejercicios Registrados</div>
+                <div class="card-body p-0 table-responsive">
+                    <table class="table table-hover align-middle mb-0 table-custom">
+                        <thead class="small text-uppercase">
+                            <tr>
+                                <th class="ps-4">ID QR</th>
+                                <th>Enunciado</th>
+                                <th>Datos X / Y</th>
+                                <th class="text-end pe-4">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaBody" class="small"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc, collection, onSnapshot, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { firebaseConfig } from "./config.js";
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    onAuthStateChanged(auth, (user) => { if (!user) window.location.href = "index.html"; });
+    document.getElementById('btnCerrarSesion').addEventListener('click', () => signOut(auth));
+
+    const tablaBody = document.getElementById('tablaBody');
+    onSnapshot(collection(db, "ejercicios"), (snapshot) => {
+        tablaBody.innerHTML = "";
+        snapshot.forEach((docSnap) => {
+            const data = docSnap.data();
+            const id = docSnap.id;
+            tablaBody.innerHTML += `
+                <tr>
+                    <td class="ps-4"><strong>${id}</strong></td>
+                    <td class="text-truncate" style="max-width: 250px;">${data.enunciado_completo}</td>
+                    <td><strong>X:</strong> [${data.datos_variable_x}]<br><strong>Y:</strong> [${data.datos_variable_y}]</td>
+                    <td class="text-end pe-4">
+                        <button class="btn btn-outline-morado btn-sm btn-editar" data-id="${id}">Editar</button>
+                        <button class="btn btn-outline-danger btn-sm btn-eliminar" data-id="${id}">Borrar</button>
+                        <button class="btn btn-dark btn-sm btn-qr" data-id="${id}">QR</button>
+                    </td>
+                </tr>`;
+        });
+        asignarEventos();
+    });
+
+    const form = document.getElementById('ejercicioForm');
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('id_enunciado').value.trim();
+        const arrayX = document.getElementById('datos_x').value.split(',').map(n => parseFloat(n.trim())).filter(n => !isNaN(n));
+        const arrayY = document.getElementById('datos_y').value.split(',').map(n => parseFloat(n.trim())).filter(n => !isNaN(n));
+
+        await setDoc(doc(db, "ejercicios", id), {
+            id_enunciado: id,
+            enunciado_completo: document.getElementById('enunciado_completo').value.trim(),
+            datos_variable_x: arrayX,
+            datos_variable_y: arrayY,
+            fecha: new Date().toISOString()
+        }, { merge: true });
+
+        form.reset();
+        mostrarQR(id);
+        alert("¡Ejercicio guardado correctamente!");
+    });
+
+    function asignarEventos() {
+        document.querySelectorAll('.btn-eliminar').forEach(b => b.addEventListener('click', async (e) => {
+            if(confirm("¿Eliminar ejercicio de la base de datos?")) await deleteDoc(doc(db, "ejercicios", e.target.dataset.id));
+        }));
+        document.querySelectorAll('.btn-qr').forEach(b => b.addEventListener('click', (e) => mostrarQR(e.target.dataset.id)));
+        document.querySelectorAll('.btn-editar').forEach(b => b.addEventListener('click', async (e) => {
+            const docRef = await getDoc(doc(db, "ejercicios", e.target.dataset.id));
+            const data = docRef.data();
+            document.getElementById('id_enunciado').value = docRef.id;
+            document.getElementById('id_enunciado').disabled = true;
+            document.getElementById('enunciado_completo').value = data.enunciado_completo;
+            document.getElementById('datos_x').value = data.datos_variable_x.join(', ');
+            document.getElementById('datos_y').value = data.datos_variable_y.join(', ');
+            document.getElementById('btnCancelarEdicion').classList.remove('d-none');
+        }));
+    }
+
+    document.getElementById('btnCancelarEdicion').addEventListener('click', () => {
+        form.reset();
+        document.getElementById('id_enunciado').disabled = false;
+        document.getElementById('btnCancelarEdicion').classList.add('d-none');
+    });
+
+    function mostrarQR(texto) {
+
+    Swal.fire({
+        width: 420,
+        background: '#ffffff',
+        padding: '1.5rem',
+
+        showCloseButton: true,
+        showCancelButton: true,
+
+        confirmButtonText: '📥 Descargar',
+        cancelButtonText: 'Cerrar',
+
+        confirmButtonColor: '#e85a06',
+        cancelButtonColor: '#51007a',
+
+        html: `
+            <div style="
+                display:flex;
+                flex-direction:column;
+                align-items:center;
+            ">
+
+                <h3 style="
+                    color:#51007a;
+                    font-weight:700;
+                    margin-bottom:12px;
+                ">
+                    Código QR
+                </h3>
+
+                <div style="
+                    background:#f1f5f9;
+                    padding:8px 16px;
+                    border-radius:12px;
+                    font-weight:700;
+                    margin-bottom:18px;
+                    color:#0f172a;
+                ">
+                    ${texto}
+                </div>
+
+                <div id="contenedorQR" style="
+                    background:white;
+                    padding:18px;
+                    border-radius:20px;
+                    border:3px solid #51007a;
+                    box-shadow:0 10px 30px rgba(0,0,0,0.12);
+                "></div>
+
+            </div>
+        `,
+
+        didOpen: () => {
+
+            new QRCode(
+                document.getElementById('contenedorQR'),
+                {
+                    text: texto,
+                    width: 220,
+                    height: 220,
+                    colorDark: "#51007a",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.H
+                }
+            );
+
+        }
+
+    }).then((result) => {
+
+        if (result.isConfirmed) {
+
+            const imgElement =
+                document
+                .getElementById('contenedorQR')
+                .querySelector('img');
+
+            if (imgElement) {
+
+                const link =
+                    document.createElement('a');
+
+                link.download = `QR_${texto}.png`;
+                link.href = imgElement.src;
+
+                link.click();
+            }
+        }
+
+    });
+
+}
+
+    // MODO OSCURO
+    window.toggleDarkMode = function () {
+
+        document.body.classList.toggle('dark-mode');
+
+    }
+    document.getElementById('btnDescargarQR').addEventListener('click', () => {
+        const img = document.querySelector('#qrcode img');
+        const link = document.createElement('a');
+        link.download = `QR_${document.getElementById('id_enunciado').value || 'ejercicio'}.png`;
+        link.href = img.src;
+        link.click();
+    });
+</script>
+</body>
+</html>
