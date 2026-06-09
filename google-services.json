@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "527014383641",
+    "project_id": "appra-estadistica",
+    "storage_bucket": "appra-estadistica.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:527014383641:android:84d931f968419291031a88",
+        "android_client_info": {
+          "package_name": "com.anthony.appra"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD-QVFK2-UhhZlnQyqwGzY4VXL14_2OdcI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

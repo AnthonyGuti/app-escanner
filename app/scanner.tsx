@@ -1,10 +1,12 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { router } from 'expo-router';
-import { doc, getDoc } from 'firebase/firestore';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Graph3D from '../components/Graph3D';
 import { guardarResultadoEstadistico } from '../services/_databaseService';
+
+// ── CAMBIO CLAVE: Importamos las funciones web que sí entiende Expo Go ──
+import { doc, getDoc } from "firebase/firestore";
 import { db } from '../services/firebaseConfig';
 
 interface EjercicioData {
@@ -23,17 +25,28 @@ export default function Scanner() {
   const [ejercicio, setEjercicio] = useState<EjercicioData | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // ── Descarga el ejercicio desde Firebase al escanear el QR ───────────────
+  // ── Descarga el ejercicio con la sintaxis estándar de Expo Go ───────────
   useEffect(() => {
     async function obtenerEjercicioFirebase() {
       if (!scannedData) return;
       setLoading(true);
       try {
-        const docRef = doc(db, "ejercicios", scannedData);
+        // Buscamos el documento en la colección 'ejercicios' de forma estándar
+        const docRef = doc(db, 'ejercicios', scannedData);
         const docSnap = await getDoc(docRef);
+        
         if (docSnap.exists()) {
-          setEjercicio(docSnap.data() as EjercicioData);
-          setStep(3);
+          // Extraemos los datos del documento
+          const datosDoc = docSnap.data();
+          
+          if (datosDoc) {
+            setEjercicio(datosDoc as EjercicioData);
+            setStep(3);
+          } else {
+            alert("El documento existe pero no contiene datos válidos.");
+            setScannedData(null);
+            setStep(1);
+          }
         } else {
           alert("El código QR escaneado no existe en el sistema.");
           setScannedData(null);
@@ -50,11 +63,10 @@ export default function Scanner() {
     }
     obtenerEjercicioFirebase();
   }, [scannedData]);
-
+  
   const xData: number[] = ejercicio?.datos_variable_x || [];
   const yData: number[] = ejercicio?.datos_variable_y || [];
 
-  // Detectamos contexto desde el enunciado para el análisis interpretativo
   const enunciado = ejercicio?.enunciado_completo?.toLowerCase() || "";
   const esIQ       = enunciado.includes("iq") || enunciado.includes("coeficiente");
   const esAnsiedad = enunciado.includes("ansiedad") || enunciado.includes("estres");
@@ -106,7 +118,7 @@ export default function Scanner() {
     [esIQ, esAnsiedad]
   );
 
-  // ── Guardado automático del historial analizado en Firebase ──────────────
+  // ── Guardado automático del historial ────────────────────────────────────
   useEffect(() => {
     if (!regresion || !scannedData || !ejercicio) return;
     const infoAnalisis = generarAnalisis(regresion.m);
@@ -135,16 +147,16 @@ export default function Scanner() {
 
   return (
     <View style={styles.container}>
-
-      {/* Cámara activa solo en paso 1 y sin carga */}
-      {step === 1 && !loading && (
+      
+      {!loading && (
         <CameraView
           style={StyleSheet.absoluteFillObject}
-          onBarcodeScanned={({ data }) => { if (data) setScannedData(data); }}
+          onBarcodeScanned={({ data }) => { 
+            if (data && step === 1) setScannedData(data); 
+          }}
         />
       )}
 
-      {/* PANTALLA DE CARGA */}
       {loading && (
         <View style={styles.fullOverlay}>
           <View style={styles.glassCard}>
@@ -155,7 +167,6 @@ export default function Scanner() {
         </View>
       )}
 
-      {/* PASO 1: ESCANEO */}
       {step === 1 && !loading && (
         <View style={styles.fullOverlay}>
           <View style={[styles.glassCard, styles.perspectiveCard]}>
@@ -167,21 +178,21 @@ export default function Scanner() {
         </View>
       )}
 
-      {/* PASO 3: HUD DE RESULTADOS */}
       {step === 3 && ejercicio && (
         <View
           style={styles.arHudContainer}
-          onStartShouldSetResponder={() => { setShowHint(false); return false; }}
+          onStartShouldSetResponder={() => {
+            setShowHint(false);
+            return false; 
+          }}
         >
           <View style={styles.zoomWrapper}>
 
-            {/* Enunciado */}
             <View style={[styles.glassPanel, styles.perspectiveLeft, { padding: 10, marginBottom: 8 }]}>
               <Text style={styles.exerciseHeader}>ID: {ejercicio.id_enunciado || scannedData}</Text>
               <Text style={styles.exerciseText} numberOfLines={3}>{ejercicio.enunciado_completo}</Text>
             </View>
 
-            {/* Tabla de registros */}
             <View style={[styles.glassPanel, styles.perspectiveRight, { height: 130, padding: 5, marginBottom: 8 }]}>
               <Text style={styles.sectionHeader}>Registros del Sistema</Text>
               <ScrollView nestedScrollEnabled style={styles.arTable}>
@@ -195,7 +206,6 @@ export default function Scanner() {
               </ScrollView>
             </View>
 
-            {/* Gráfica 3D */}
             <View style={[styles.floatingGraphWrapper, styles.perspectiveGraph]}>
               <Graph3D xData={xData} yData={yData} />
               {showHint && (
@@ -205,7 +215,6 @@ export default function Scanner() {
               )}
             </View>
 
-            {/* Ecuación */}
             {regresion && (
               <View style={[styles.glassPanel, styles.perspectiveLeft, { marginTop: 5 }]}>
                 <Text style={styles.equationValue}>
@@ -214,7 +223,6 @@ export default function Scanner() {
               </View>
             )}
 
-            {/* Análisis interpretativo */}
             {regresion && (() => {
               const analisis = generarAnalisis(regresion.m);
               return (
@@ -247,18 +255,18 @@ export default function Scanner() {
 }
 
 const styles = StyleSheet.create({
-  container:            { flex: 1, backgroundColor: '#000' },
-  center:               { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  container:            { flex: 1, backgroundColor: 'transparent' }, 
+  center:               { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#000' },
   whiteText:            { color: 'white', marginBottom: 20 },
   glassCard:            { backgroundColor: 'rgba(10, 10, 30, 0.8)', padding: 25, borderRadius: 30, alignItems: 'center', width: '85%', borderWidth: 1.5, borderColor: 'rgba(0, 229, 255, 0.4)' },
   glassPanel:           { backgroundColor: 'rgba(15, 20, 45, 0.85)', padding: 15, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.15)' },
-  arHudContainer:       { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  arHudContainer:       { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center', zIndex: 5 }, 
   zoomWrapper:          { width: '100%', paddingHorizontal: 15, transform: [{ scale: 0.88 }, { perspective: 1000 }] },
   perspectiveCard:      { transform: [{ perspective: 1000 }, { rotateX: '5deg' }] },
   perspectiveLeft:      { transform: [{ perspective: 1000 }, { rotateY: '8deg' }] },
   perspectiveRight:     { transform: [{ perspective: 1000 }, { rotateY: '-8deg' }] },
   perspectiveGraph:     { transform: [{ perspective: 1000 }, { rotateX: '10deg' }] },
-  fullOverlay:          { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center', zIndex: 10, backgroundColor: 'rgba(0,0,0,0.5)' },
+  fullOverlay:          { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center', zIndex: 10, backgroundColor: 'rgba(0,0,0,0.4)' }, 
   qrGuide:              { width: 180, height: 180, borderWidth: 2, borderColor: '#00e5ff', borderStyle: 'dashed', borderRadius: 20, marginVertical: 15 },
   stepTag:              { color: '#00e5ff', fontSize: 10, fontWeight: 'bold', letterSpacing: 2 },
   glassTitle:           { color: 'white', fontSize: 20, fontWeight: 'bold' },
@@ -269,7 +277,7 @@ const styles = StyleSheet.create({
   arTable:              { borderRadius: 10, backgroundColor: 'rgba(0, 0, 0, 0.3)' },
   arTableRow:           { flexDirection: 'row', borderBottomWidth: 0.5, borderBottomColor: 'rgba(255,255,255,0.1)', padding: 6 },
   arCell:               { flex: 1, color: '#E0E0E0', textAlign: 'center', fontSize: 11 },
-  floatingGraphWrapper: { height: 380, width: '100%', backgroundColor: 'rgba(10, 10, 30, 0.4)', borderRadius: 30, borderWidth: 2, borderColor: 'rgba(0, 229, 255, 0.7)', overflow: 'hidden' },
+  floatingGraphWrapper: { height: 380, width: '100%', backgroundColor: 'rgba(10, 10, 30, 0.3)', borderRadius: 30, borderWidth: 2, borderColor: 'rgba(0, 229, 255, 0.7)', overflow: 'hidden' }, 
   hintCloud:            { position: 'absolute', top: 20, alignSelf: 'center', backgroundColor: 'rgba(0, 229, 255, 0.3)', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: '#00e5ff' },
   hintText:             { color: '#00e5ff', fontSize: 12, fontWeight: 'bold' },
   equationValue:        { color: '#00e5ff', fontSize: 24, fontWeight: 'bold', textAlign: 'center', textShadowColor: '#00e5ff', textShadowRadius: 10 },

@@ -1,9 +1,9 @@
-import { router, useNavigation } from 'expo-router';
+import { Stack, router, useNavigation } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Graph3D from '../components/Graph3D';
 
-export default function TheoryScreen() {
+export default function QuadraticTheory() {
   const navigation = useNavigation();
   const [isFocused, setIsFocused] = useState(true);
   const [xInput, setXInput] = useState("");
@@ -11,7 +11,7 @@ export default function TheoryScreen() {
   const [datosX, setDatosX] = useState<number[]>([]);
   const [datosY, setDatosY] = useState<number[]>([]);
 
-  // 1. Control de navegación para liberar memoria al salir (evita que se trabe)
+  // Control de navegación para liberar memoria
   useEffect(() => {
     const unsubscribeFocus = navigation.addListener('focus', () => setIsFocused(true));
     const unsubscribeBlur = navigation.addListener('blur', () => setIsFocused(false));
@@ -21,7 +21,7 @@ export default function TheoryScreen() {
     };
   }, [navigation]);
 
-  // 2. Agregado atómico para que cargue el punto inmediatamente
+  // Agregar punto inmediatamente
   const agregarDato = useCallback(() => {
     const valX = parseFloat(xInput);
     const valY = parseFloat(yInput);
@@ -38,7 +38,7 @@ export default function TheoryScreen() {
     setYInput("");
   }, [xInput, yInput]);
 
-  // 3. Limpieza instantánea
+  // Limpiar gráfica
   const reiniciarGrafica = () => {
     setDatosX([]);
     setDatosY([]);
@@ -46,61 +46,87 @@ export default function TheoryScreen() {
     setYInput("");
   };
 
-  // --- TU LÓGICA DE TEORÍA (CONSERVADA SIN CAMBIOS) ---
-  const regresion = useMemo(() => {
+  // Mínimos Cuadrados para curvas (Parábolas)
+  const regresionCuadratica = useMemo(() => {
     const n = datosX.length;
-    if (n < 2) return null;
-    const sumX = datosX.reduce((a, b) => a + b, 0);
-    const sumY = datosY.reduce((a, b) => a + b, 0);
-    const sumXY = datosX.reduce((a, v, i) => a + v * datosY[i], 0);
-    const sumX2 = datosX.reduce((a, v) => a + v * v, 0);
-    const denominador = (n * sumX2 - sumX * sumX);
-    if (denominador === 0) return null;
-    const m = (n * sumXY - sumX * sumY) / denominador;
-    const b = (sumY - m * sumX) / n;
-    return { m, b };
+    if (n < 3) return null; 
+
+    let sumX = 0, sumY = 0, sumX2 = 0, sumX3 = 0, sumX4 = 0;
+    let sumXY = 0, sumX2Y = 0;
+
+    for (let i = 0; i < n; i++) {
+      const x = datosX[i];
+      const y = datosY[i];
+      const x2 = x * x;
+
+      sumX += x;
+      sumY += y;
+      sumX2 += x2;
+      sumX3 += x2 * x;
+      sumX4 += x2 * x2;
+      sumXY += x * y;
+      sumX2Y += x2 * y;
+    }
+
+    const d = n * (sumX2 * sumX4 - sumX3 * sumX3) - sumX * (sumX * sumX4 - sumX2 * sumX3) + sumX2 * (sumX * sumX3 - sumX2 * sumX2);
+    if (d === 0) return null;
+
+    const da = sumY * (sumX2 * sumX4 - sumX3 * sumX3) - sumX * (sumXY * sumX4 - sumX2Y * sumX3) + sumX2 * (sumXY * sumX3 - sumX2Y * sumX2);
+    const db = n * (sumXY * sumX4 - sumX2Y * sumX3) - sumY * (sumX * sumX4 - sumX2 * sumX3) + sumX2 * (sumX * sumX2Y - sumX2 * sumXY);
+    const dc = n * (sumX2 * sumX2Y - sumX3 * sumXY) - sumX * (sumX * sumX2Y - sumX2 * sumXY) + sumY * (sumX * sumX3 - sumX2 * sumX2);
+
+    return {
+      a: da / d,
+      b: db / d,
+      c: dc / d
+    };
   }, [datosX, datosY]);
 
   return (
     <ScrollView style={styles.container}>
+      <Stack.Screen options={{ headerShown: false }} />
+
+      {/* Barra superior con botón de regreso */}
       <View style={styles.header}>
-        <Text style={styles.title}>Fundamentos de Regresión</Text>
-        <Text style={styles.subtitle}>Universidad Indoamérica</Text>
+        <TouchableOpacity style={styles.backArrow} onPress={() => router.replace('/')}>
+          <Text style={styles.backArrowText}>←</Text>
+        </TouchableOpacity>
+        <View style={styles.headerTextContainer}>
+          <Text style={styles.title}>Regresión Cuadrática</Text>
+          <Text style={styles.subtitle}>Universidad Indoamérica</Text>
+        </View>
       </View>
 
-      {/* --- TEORÍA INTACTA --- */}
+      {/* Teoría */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>¿Qué es la Regresión Lineal?</Text>
+        <Text style={styles.cardTitle}>¿Qué es la Regresión Cuadrática?</Text>
         <Text style={styles.content}>
-          Es como trazar la <Text style={styles.highlight}>línea más justa</Text> que pase por en medio de un grupo de puntos. 
-          Su objetivo es decirnos cómo cambia una cosa cuando otra se mueve.
+          Es un modelo estadístico que se usa cuando los datos no siguen una línea recta, sino una <Text style={styles.highlight}>curva o parábola</Text>. Es ideal cuando las variables primero suben hasta un tope y luego comienzan a bajar.
         </Text>
       </View>
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>La Ecuación Matemática</Text>
         <View style={styles.formulaBox}>
-          <Text style={styles.formula}>y = mx + b</Text>
+          <Text style={styles.formula}>y = ax² + bx + c</Text>
         </View>
         <Text style={styles.content}>
-          • <Text style={styles.label}>m (Pendiente):</Text> Inclinación de la recta.{"\n"}
-          • <Text style={styles.label}>b (Intercepto):</Text> Punto de corte en Y.
+          • <Text style={styles.label}>a (Curvatura):</Text> Si es positivo abre hacia arriba (U), si es negativo abre hacia abajo.{"\n"}
+          • <Text style={styles.label}>b (Desplazamiento):</Text> Mueve la curva de lado a lado.{"\n"}
+          • <Text style={styles.label}>c (Intercepto):</Text> Punto de choque en el eje Y.
         </Text>
       </View>
 
-      {/* --- SIMULADOR OPTIMIZADO --- */}
+      {/* Simulador con Fondo Blanco */}
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Gráfica 3D (Simulador)</Text>
         
         <View style={styles.graphContainer}>
-          {/* SOLUCIÓN: Usamos datosX.length como key para que solo 
-            se refresque cuando cambia la cantidad de puntos, no con cada tecla.
-          */}
           {isFocused ? (
-            <Graph3D key={datosX.length} xData={datosX} yData={datosY} />
+            <Graph3D key={datosX.length} xData={datosX} yData={datosY} type="quadratic" />
           ) : (
             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-              <Text style={{ color: '#B39DDB' }}>Cargando simulador...</Text>
+              <Text style={{ color: '#757575' }}>Cargando simulador...</Text>
             </View>
           )}
         </View>
@@ -109,16 +135,16 @@ export default function TheoryScreen() {
           <TextInput 
             style={styles.input}
             keyboardType="numeric" 
-            placeholder="X" 
-            placeholderTextColor="#B39DDB"
+            placeholder="Punto X" 
+            placeholderTextColor="#B0BEC5"
             value={xInput}
             onChangeText={setXInput} 
           />
           <TextInput 
             style={styles.input}
             keyboardType="numeric" 
-            placeholder="Y" 
-            placeholderTextColor="#B39DDB"
+            placeholder="Punto Y" 
+            placeholderTextColor="#B0BEC5"
             value={yInput}
             onChangeText={setYInput} 
           />
@@ -131,20 +157,27 @@ export default function TheoryScreen() {
           <Text style={styles.btnResetText}>LIMPIAR PUNTOS</Text>
         </TouchableOpacity>
 
-        {regresion && (
+        {regresionCuadratica ? (
           <View style={styles.resultBox}>
             <Text style={styles.resultFormula}>
-              y = {regresion.m.toFixed(2)}x {regresion.b >= 0 ? '+' : '-'} {Math.abs(regresion.b).toFixed(2)}
+              y = {regresionCuadratica.a.toFixed(2)}x² {regresionCuadratica.b >= 0 ? '+' : '-'} {Math.abs(regresionCuadratica.b).toFixed(2)}x {regresionCuadratica.c >= 0 ? '+' : '-'} {Math.abs(regresionCuadratica.c).toFixed(2)}
+            </Text>
+          </View>
+        ) : (
+          <View style={{ padding: 5 }}>
+            <Text style={{ color: '#B39DDB', textAlign: 'center', fontSize: 13 }}>
+              Ingresa al menos 3 puntos para trazar la parábola
             </Text>
           </View>
         )}
       </View>
 
+      {/* Botón Principal para volver */}
       <TouchableOpacity 
         style={styles.buttonMain} 
-        onPress={() => router.push('/scanner')}
+        onPress={() => router.replace('/')}
       >
-        <Text style={styles.buttonText}>¡ENTENDIDO! IR A ESCANEAR ➔</Text>
+        <Text style={styles.buttonText}>➔ VOLVER AL MENÚ PRINCIPAL</Text>
       </TouchableOpacity>
 
       <View style={{ height: 60 }} />
@@ -154,7 +187,10 @@ export default function TheoryScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#4A148C' },
-  header: { paddingTop: 60, paddingHorizontal: 20, marginBottom: 10 },
+  header: { paddingTop: 60, paddingHorizontal: 20, marginBottom: 10, flexDirection: 'row', alignItems: 'center' },
+  backArrow: { paddingRight: 15, paddingVertical: 5 },
+  backArrowText: { color: 'white', fontSize: 28, fontWeight: 'bold' },
+  headerTextContainer: { flex: 1 },
   title: { fontSize: 24, fontWeight: 'bold', color: 'white' },
   subtitle: { fontSize: 16, color: '#B39DDB' },
   card: { backgroundColor: '#38006B', marginHorizontal: 20, borderRadius: 15, padding: 20, marginBottom: 20 },
@@ -164,15 +200,18 @@ const styles = StyleSheet.create({
   label: { color: '#FF7043', fontWeight: 'bold' },
   formulaBox: { backgroundColor: '#2a004f', padding: 15, borderRadius: 10, alignItems: 'center', marginVertical: 10 },
   formula: { fontSize: 28, fontWeight: 'bold', color: '#00e5ff' },
-  graphContainer: { height: 300, backgroundColor: '#1a0030', borderRadius: 10, overflow: 'hidden', marginBottom: 15, borderWidth: 1, borderColor: '#00e5ff' },
+  
+  // CAMBIO A FONDO BLANCO AQUÍ
+  graphContainer: { height: 300, backgroundColor: '#ffffff', borderRadius: 10, overflow: 'hidden', marginBottom: 15, borderWidth: 1, borderColor: '#B0BEC5' },
+  
   inputRow: { flexDirection: 'row', marginBottom: 15 },
-  input: { flex: 1, backgroundColor: '#2a004f', borderRadius: 10, color: 'white', padding: 12, marginRight: 8 },
+  input: { flex: 1, backgroundColor: '#2a004f', borderRadius: 10, color: 'white', padding: 12, marginRight: 8, borderWidth: 1, borderColor: '#4A148C' },
   btnAdd: { backgroundColor: '#00e5ff', width: 50, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
   btnAddText: { fontSize: 24, fontWeight: 'bold', color: '#000' },
   btnReset: { backgroundColor: 'rgba(255, 112, 67, 0.2)', padding: 12, borderRadius: 10, alignItems: 'center', marginBottom: 10, borderWidth: 1, borderColor: '#FF7043' },
   btnResetText: { color: '#FF7043', fontWeight: 'bold' },
   resultBox: { padding: 10, backgroundColor: 'rgba(0,229,255,0.1)', borderRadius: 10 },
-  resultFormula: { color: '#00e5ff', fontSize: 20, fontWeight: 'bold', textAlign: 'center' },
+  resultFormula: { color: '#00e5ff', fontSize: 16, fontWeight: 'bold', textAlign: 'center' },
   buttonMain: { backgroundColor: '#FF7043', marginHorizontal: 20, padding: 18, borderRadius: 12, alignItems: 'center' },
   buttonText: { color: 'white', fontWeight: 'bold', fontSize: 16 }
 });

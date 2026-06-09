@@ -1,17 +1,32 @@
+// components/Graph3D.tsx
+
 import { GLView } from 'expo-gl';
 import { Renderer } from 'expo-three';
-import { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { PanResponder, View } from 'react-native';
 import * as THREE from 'three';
 
-export default function Graph3D({ xData, yData, setLockScroll }: any) {
-  const rotation = useRef({ x: 0, y: 0 });
-  const startRotation = useRef({ x: 0, y: 0 });
-  const zoom = useRef(28);
-  const lastDistance = useRef<number | null>(null);
-  const animProgress = useRef(0);
+interface Graph3DProps {
+  xData: number[];
+  yData: number[];
+  setLockScroll?: (lock: boolean) => void;
+  transparente?: boolean; 
+  type?: string; 
+}
 
-  // ── FIX 1: cancelar el loop al salir del módulo ────────────────────────
+export default function Graph3D({ xData, yData, setLockScroll, transparente = true, type }: Graph3DProps) {
+  const rotation = useRef({ x: 0.3, y: 0.4 });
+  const lastTouch = useRef<{ x: number; y: number } | null>(null);
+  
+  // Control de Zoom suave
+  const zoom = useRef(35);
+  const minZoom = 12;
+  const maxZoom = 100;
+  
+  // Guardar la distancia anterior entre dos dedos para calcular el cambio (Pinch)
+  const lastPinchDist = useRef<number | null>(null);
+
+  const animProgress = useRef(0);
   const rafHandle = useRef<number>(0);
   const mounted = useRef(true);
 
@@ -22,45 +37,86 @@ export default function Graph3D({ xData, yData, setLockScroll }: any) {
       cancelAnimationFrame(rafHandle.current);
     };
   }, []);
-  // ───────────────────────────────────────────────────────────────────────
 
   useEffect(() => {
     animProgress.current = 0;
   }, [xData, yData]);
 
+  // Función matemática para calcular la distancia exacta entre dos dedos
+  const calcDistance = (t1: any, t2: any) => {
+    const dx = t1.pageX - t2.pageX;
+    const dy = t1.pageY - t2.pageY;
+    return Math.sqrt(dx * dx + dy * dy);
+  };
+
+  // PANRESPONDER REESCRITO: Zoom matemático fluido y rápido
   const panResponder = PanResponder.create({
     onStartShouldSetPanResponder: () => true,
-    onPanResponderGrant: () => {
+    onMoveShouldSetPanResponder: () => true,
+    onPanResponderTerminationRequest: () => false, // Evita que la cámara nativa o el scroll roben el gesto
+
+    onPanResponderGrant: (evt) => {
       setLockScroll?.(true);
-      startRotation.current = { ...rotation.current };
-    },
-    onPanResponderMove: (evt, gesture) => {
       const t = evt.nativeEvent.touches;
       if (t.length === 1) {
-        rotation.current.y = startRotation.current.y + gesture.dx * 0.004;
-        rotation.current.x = startRotation.current.x + gesture.dy * 0.004;
-      }
-      if (t.length === 2) {
-        const dx = t[0].pageX - t[1].pageX;
-        const dy = t[0].pageY - t[1].pageY;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (lastDistance.current !== null) {
-          const diff = dist - lastDistance.current;
-          zoom.current -= diff * 0.04;
-          zoom.current = Math.max(10, Math.min(80, zoom.current));
-        }
-        lastDistance.current = dist;
+        lastTouch.current = { x: t[0].pageX, y: t[0].pageY };
+        lastPinchDist.current = null;
+      } else if (t.length === 2) {
+        lastPinchDist.current = calcDistance(t[0], t[1]);
       }
     },
+
+    onPanResponderMove: (evt) => {
+      const t = evt.nativeEvent.touches;
+      
+      // SI HAY 2 DEDOS: Zoom natural por diferencia de distancia (Pinch to Zoom)
+      if (t.length === 2) {
+        const currentDist = calcDistance(t[0], t[1]);
+        if (lastPinchDist.current !== null) {
+          // El cambio de distancia entre el frame anterior y el actual
+          const delta = currentDist - lastPinchDist.current;
+          
+          // Factor de velocidad (0.12 hace que responda instantáneamente y suave)
+          const sensibilidad = 0.12; 
+          
+          // Si los dedos se separan (delta positivo), el zoom disminuye (se acerca la cámara)
+          zoom.current -= delta * sensibilidad;
+          
+          // Restringir límites para que no se rompa la escena
+          if (zoom.current < minZoom) zoom.current = minZoom;
+          if (zoom.current > maxZoom) zoom.current = maxZoom;
+        }
+        lastPinchDist.current = currentDist;
+      } 
+      // SI HAY 1 DEDO: Rotación orbital libre
+      else if (t.length === 1) {
+        lastPinchDist.current = null; // Resetear zoom por si venía de usar 2 dedos
+        if (lastTouch.current) {
+          const deltaX = t[0].pageX - lastTouch.current.x;
+          const deltaY = t[0].pageY - lastTouch.current.y;
+          rotation.current.y += deltaX * 0.007;
+          rotation.current.x += deltaY * 0.007;
+        }
+        lastTouch.current = { x: t[0].pageX, y: t[0].pageY };
+      }
+    },
+
     onPanResponderRelease: () => {
       setLockScroll?.(false);
-      lastDistance.current = null;
+      lastTouch.current = null;
+      lastPinchDist.current = null;
+    },
+
+    onPanResponderTerminate: () => {
+      setLockScroll?.(false);
+      lastTouch.current = null;
+      lastPinchDist.current = null;
     },
   });
 
   const createBlockLabel = (type: 'X' | 'Y' | 'Z') => {
     const group = new THREE.Group();
-    const mat = new THREE.MeshBasicMaterial({ color: 0x00f2ff });
+    const mat = new THREE.MeshBasicMaterial({ color: transparente ? 0xffffff : 0x000000 });
     if (type === 'X') {
       const geo = new THREE.BoxGeometry(0.2, 1.3, 0.2);
       const b1 = new THREE.Mesh(geo, mat); b1.rotation.z = Math.PI / 4;
@@ -82,14 +138,69 @@ export default function Graph3D({ xData, yData, setLockScroll }: any) {
     return group;
   };
 
+  const createNumberLabel = (textStr: string) => {
+    const group = new THREE.Group();
+    const mat = new THREE.MeshBasicMaterial({ color: transparente ? 0xeeeeee : 0x111111 });
+    let currentXOffset = 0;
+    for (let i = 0; i < textStr.length; i++) {
+      const char = textStr[i];
+      const charGroup = new THREE.Group();
+      if (char === '-') {
+        const minus = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.08, 0.12), mat);
+        charGroup.add(minus);
+        currentXOffset += 0.4;
+      } else if (char === '1') {
+        const vertical = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.8, 0.12), mat);
+        const hook = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.08, 0.12), mat);
+        hook.position.set(-0.06, 0.36, 0); hook.rotation.z = Math.PI / 4;
+        charGroup.add(vertical, hook);
+        currentXOffset += 0.4;
+      } else if (char === '2') {
+        const top = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.09, 0.12), mat); top.position.set(0, 0.35, 0);
+        const middle = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.09, 0.12), mat); middle.position.set(0, 0, 0);
+        const bottom = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.09, 0.12), mat); bottom.position.set(0, -0.35, 0);
+        const r1 = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.26, 0.12), mat); r1.position.set(0.155, 0.175, 0);
+        const l1 = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.26, 0.12), mat); l1.position.set(-0.155, -0.175, 0);
+        charGroup.add(top, middle, bottom, r1, l1);
+        currentXOffset += 0.55;
+      } else if (char === '3') {
+        const top = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.09, 0.12), mat); top.position.set(0, 0.35, 0);
+        const middle = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.09, 0.12), mat); middle.position.set(-0.05, 0, 0);
+        const bottom = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.09, 0.12), mat); bottom.position.set(0, -0.35, 0);
+        const r1 = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.78, 0.12), mat); r1.position.set(0.18, 0, 0);
+        charGroup.add(top, middle, bottom, r1);
+        currentXOffset += 0.55;
+      } else if (char === '5') {
+        const top = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.09, 0.12), mat); top.position.set(0, 0.35, 0);
+        const lineLeft = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.35, 0.12), mat); lineLeft.position.set(-0.155, 0.175, 0);
+        const middle = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.09, 0.12), mat); middle.position.set(0, 0, 0);
+        const lineRight = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.35, 0.12), mat); lineRight.position.set(0.155, -0.175, 0);
+        const bottom = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.09, 0.12), mat); bottom.position.set(0, -0.35, 0);
+        charGroup.add(top, lineLeft, middle, lineRight, bottom);
+        currentXOffset += 0.55;
+      } else if (char === '0') {
+        const t = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.09, 0.12), mat); t.position.y = 0.35;
+        const b = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.09, 0.12), mat); b.position.y = -0.35;
+        const l = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.78, 0.12), mat); l.position.x = -0.18;
+        const r = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.78, 0.12), mat); r.position.x = 0.18;
+        charGroup.add(t, b, l, r);
+        currentXOffset += 0.55;
+      }
+      charGroup.position.x = currentXOffset - (char === '-' ? 0.2 : 0);
+      group.add(charGroup);
+    }
+    group.scale.set(0.65, 0.65, 0.65);
+    return group;
+  };
+
   return (
-    <View style={{ flex: 1 }} {...panResponder.panHandlers}>
+    <View style={{ flex: 1, backgroundColor: 'transparent' }} {...panResponder.panHandlers}>
       <GLView
-        style={{ flex: 1 }}
+        style={{ flex: 1, backgroundColor: 'transparent' }}
         onContextCreate={(gl) => {
           const renderer = new Renderer({ gl, alpha: true }) as any;
           renderer.setSize(gl.drawingBufferWidth, gl.drawingBufferHeight);
-          renderer.setClearColor(0x000000, 0);
+          renderer.setClearColor(0x000000, 0); 
 
           const scene = new THREE.Scene();
           const camera = new THREE.PerspectiveCamera(
@@ -98,44 +209,49 @@ export default function Graph3D({ xData, yData, setLockScroll }: any) {
             0.1,
             1000
           );
-          camera.position.set(0, 0, 40);
-          scene.add(new THREE.AmbientLight(0xffffff, 1.5));
-          scene.add(new THREE.GridHelper(20, 20, 0x444444, 0x222222));
+          
+          camera.position.set(0, 0, zoom.current); 
+          scene.add(new THREE.AmbientLight(0xffffff, 1.8));
+
+          const gridColor = transparente ? 0x9575cd : 0x999999;
+          const gridCenter = transparente ? 0xb39ddb : 0xe0e0e0;
+          scene.add(new THREE.GridHelper(32, 32, gridColor, gridCenter));
 
           const axis = (pts: THREE.Vector3[], col: number) => {
             scene.add(
               new THREE.Line(
                 new THREE.BufferGeometry().setFromPoints(pts),
-                new THREE.LineBasicMaterial({ color: col })
+                new THREE.LineBasicMaterial({ color: col, linewidth: 2 })
               )
             );
           };
-          axis([new THREE.Vector3(-10, 0, 0), new THREE.Vector3(10, 0, 0)], 0xff3b30);
-          axis([new THREE.Vector3(0, -10, 0), new THREE.Vector3(0, 10, 0)], 0x34c759);
-          axis([new THREE.Vector3(0, 0, -10), new THREE.Vector3(0, 0, 10)], 0x007aff);
+          axis([new THREE.Vector3(-16, 0, 0), new THREE.Vector3(16, 0, 0)], 0xff3b30);
+          axis([new THREE.Vector3(0, -16, 0), new THREE.Vector3(0, 16, 0)], 0x34c759);
+          axis([new THREE.Vector3(0, 0, -16), new THREE.Vector3(0, 0, 16)], 0x007aff);
 
-          const lx = createBlockLabel('X'); lx.position.set(11, 0.5, 0); scene.add(lx);
-          const ly = createBlockLabel('Y'); ly.position.set(0.5, 11, 0); scene.add(ly);
-          const lz = createBlockLabel('Z'); lz.position.set(0, 0.5, 11); scene.add(lz);
+          const lx = createBlockLabel('X'); lx.position.set(17, 0.5, 0); scene.add(lx);
+          const ly = createBlockLabel('Y'); ly.position.set(0.5, 17, 0); scene.add(ly);
+          const lz = createBlockLabel('Z'); lz.position.set(0, 0.5, 17); scene.add(lz);
+          const todasLasEtiquetas: THREE.Group[] = [lx, ly, lz];
 
-          // ── FIX 2: rangos seguros para 0, 1 o muchos puntos ─────────────
+          const valoresMarcas = [-15, -10, -5, 5, 10, 15];
+          valoresMarcas.forEach((num) => {
+            const p = (num / 15) * 15;
+            const labelX = createNumberLabel(num.toString()); labelX.position.set(p - 0.2, -0.9, 0); scene.add(labelX); todasLasEtiquetas.push(labelX);
+            const labelY = createNumberLabel(num.toString()); labelY.position.set(0.9, p, 0); scene.add(labelY); todasLasEtiquetas.push(labelY);
+            const labelZ = createNumberLabel(num.toString()); labelZ.position.set(0, -0.9, p); scene.add(labelZ); todasLasEtiquetas.push(labelZ);
+          });
+
           const n = xData.length;
+          const minX = n > 0 ? Math.min(...xData) : -15;
+          const maxX = n > 0 ? Math.max(...xData) : 15;
+          const minY = n > 0 ? Math.min(...yData) : -15;
+          const maxY = n > 0 ? Math.max(...yData) : 15;
+          const rX = (maxX - minX) || 30;
+          const rY = (maxY - minY) || 30;
+          const sx = (v: number) => ((v - minX) / rX) * 24 - 12;
+          const sy = (v: number) => ((v - minY) / rY) * 24 - 12;
 
-          // Con 0 puntos usamos rango dummy; con 1 punto forzamos rango de 2
-          const minX = n > 0 ? Math.min(...xData) : -1;
-          const maxX = n > 0 ? Math.max(...xData) : 1;
-          const minY = n > 0 ? Math.min(...yData) : -1;
-          const maxY = n > 0 ? Math.max(...yData) : 1;
-
-          // rX/rY nunca son 0 → evita divisiones por cero y puntos superpuestos
-          const rX = (maxX - minX) || 2;
-          const rY = (maxY - minY) || 2;
-
-          const sx = (v: number) => ((v - minX) / rX) * 12 - 6;
-          const sy = (v: number) => ((v - minY) / rY) * 12 - 6;
-          // ────────────────────────────────────────────────────────────────
-
-          // ── FIX 3: regresión solo con ≥2 puntos y denominador válido ────
           let m = 0, bCoef = 0, canDrawLine = false;
           if (n >= 2) {
             const sumX  = xData.reduce((a: number, v: number) => a + v, 0);
@@ -144,60 +260,57 @@ export default function Graph3D({ xData, yData, setLockScroll }: any) {
             const sumX2 = xData.reduce((a: number, v: number) => a + v * v, 0);
             const denom = n * sumX2 - sumX * sumX;
             if (denom !== 0) {
-              m      = (n * sumXY - sumX * sumY) / denom;
-              bCoef  = (sumY - m * sumX) / n;
+              m = (n * sumXY - sumX * sumY) / denom;
+              bCoef = (sumY - m * sumX) / n;
               canDrawLine = isFinite(m) && isFinite(bCoef);
             }
           }
-          // ────────────────────────────────────────────────────────────────
 
-          // Puntos — se muestran todos desde el primero
           xData.forEach((x: number, i: number) => {
             const p = new THREE.Mesh(
-              new THREE.SphereGeometry(0.3, 8, 8),
+              new THREE.SphereGeometry(0.45, 16, 16),
               new THREE.MeshBasicMaterial({ color: 0xff2d75 })
             );
             p.position.set(sx(x), sy(yData[i]), 0);
             scene.add(p);
           });
 
-          // Recta animada (solo si hay regresión válida)
           const lineGeometry = new THREE.BufferGeometry();
-          const lineMaterial = new THREE.LineBasicMaterial({ color: 0x00ff88, linewidth: 3 });
+          const lineMaterial = new THREE.LineBasicMaterial({ color: 0x00e5ff, linewidth: 5 });
           const animatedLine = new THREE.Line(lineGeometry, lineMaterial);
           if (canDrawLine) scene.add(animatedLine);
 
-          // ── FIX 4: loop con guarda de desmontaje ───────────────────────
           const render = () => {
-            if (!mounted.current) return; // componente desmontado → para el loop
+            if (!mounted.current) return;
             rafHandle.current = requestAnimationFrame(render);
-
+            
             if (canDrawLine && animProgress.current < 1) {
               animProgress.current += 0.01;
-              const currentPoints: THREE.Vector3[] = [];
+              const pts: THREE.Vector3[] = [];
               const steps = 20;
               const limit = Math.floor(steps * animProgress.current);
               for (let i = 0; i <= limit; i++) {
                 const xv = minX + (rX * i) / steps;
-                currentPoints.push(new THREE.Vector3(sx(xv), sy(m * xv + bCoef), 0));
+                pts.push(new THREE.Vector3(sx(xv), sy(m * xv + bCoef), 0));
               }
-              if (currentPoints.length > 1) lineGeometry.setFromPoints(currentPoints);
+              if (pts.length > 1) lineGeometry.setFromPoints(pts);
             }
 
-            camera.position.z += (zoom.current - camera.position.z) * 0.1;
+            // ✅ Interpolación fluida de la posición de la cámara basada en el zoom actual
+            camera.position.z += (zoom.current - camera.position.z) * 0.2;
             camera.lookAt(0, 0, 0);
+            
             scene.rotation.x = rotation.current.x;
             scene.rotation.y = rotation.current.y;
 
-            [lx, ly, lz].forEach(label => {
-              label.rotation.set(-rotation.current.x, -rotation.current.y, 0);
+            todasLasEtiquetas.forEach(l => {
+              l.quaternion.copy(camera.quaternion);
             });
 
             renderer.render(scene, camera);
             gl.endFrameEXP();
           };
           render();
-          // ────────────────────────────────────────────────────────────────
         }}
       />
     </View>

@@ -8,7 +8,7 @@ export default function Index() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
       
-      {/* Header ajustado: El borde oscuro no baja, solo contiene al logo */}
+      {/* Header con el logo de la Universidad Indoamérica */}
       <View style={styles.header}>
         <Image 
           source={require('../assets/images/image_72ab7f.png')} 
@@ -20,7 +20,7 @@ export default function Index() {
       <View style={styles.content}>
         <Text style={styles.welcomeText}>¡Bienvenido!</Text>
         
-        {/* Mascota Pumas - Ahora sí se va a ver grande */}
+        {/* Mascota Pumas */}
         <Image 
           source={require('../assets/images/image_7305bb.png')} 
           style={styles.mascot} 
@@ -28,15 +28,27 @@ export default function Index() {
         />
 
         <Text style={styles.instructionText}>
-          Aprende Regresión Lineal con Realidad Aumentada
+          Selecciona el modelo estadístico que deseas aprender hoy
         </Text>
 
+        {/* --- LOS DOS ÚNICOS BOTONES DE TEORÍA --- */}
+        
+        {/* Botón 1: Teoría de Regresión Lineal */}
         <TouchableOpacity 
-          style={styles.button} 
-          onPress={() => router.push('/theory')} 
+          style={styles.buttonLinear} 
+          onPress={() => router.push('./linear-theory')} 
         >
-          <Text style={styles.buttonText}>INICIAR LECCIÓN</Text>
+          <Text style={styles.buttonText}>TEORÍA REGRESIÓN LINEAL</Text>
         </TouchableOpacity>
+
+        {/* Botón 2: Teoría de Regresión Cuadrática */}
+        <TouchableOpacity 
+          style={styles.buttonQuadratic} 
+          onPress={() => router.push('./quadratic-theory')} 
+        >
+          <Text style={styles.buttonText}>TEORÍA REGRESIÓN CUADRÁTICA</Text>
+        </TouchableOpacity>
+
       </View>
     </View>
   );
@@ -50,14 +62,14 @@ const styles = StyleSheet.create({
   header: { 
     paddingTop: 60, 
     paddingHorizontal: 15, 
-    paddingBottom: 10, // Sincronización: el borde termina justo tras el logo
+    paddingBottom: 10, 
     backgroundColor: '#38006B',
     alignItems: 'center',
     justifyContent: 'center'
   },
   logo: { 
-    width: width * 0.85, // Ocupa el 85% del ancho de la pantalla
-    height: 80,          // Altura suficiente para que sea grande
+    width: width * 0.85, 
+    height: 80,          
   },
   content: { 
     flex: 1, 
@@ -66,9 +78,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20
   },
   mascot: { 
-    width: width * 0.75, // Imagen de la mascota mucho más grande
-    height: width * 0.75, 
-    marginVertical: 10   // Pegado a los textos para no desperdiciar espacio
+    width: width * 0.65, 
+    height: width * 0.65, 
+    marginVertical: 15   
   },
   welcomeText: { 
     color: 'white', 
@@ -79,25 +91,41 @@ const styles = StyleSheet.create({
   instructionText: { 
     color: '#B39DDB', 
     fontSize: 16, 
-    marginTop: 10,
-    marginBottom: 30, 
+    marginTop: 5,
+    marginBottom: 25, 
     textAlign: 'center', 
-    paddingHorizontal: 30 
+    paddingHorizontal: 20 
   },
-  button: { 
-    backgroundColor: '#FF7043', 
-    paddingVertical: 15, 
-    paddingHorizontal: 50, 
+  buttonLinear: { 
+    backgroundColor: '#7B1FA2', 
+    paddingVertical: 16, 
+    width: width * 0.8, 
     borderRadius: 12, 
-    elevation: 5,
+    alignItems: 'center',
+    marginVertical: 8, 
+    elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    shadowOpacity: 0.22,
+    shadowRadius: 3,
+  },
+  buttonQuadratic: { 
+    backgroundColor: '#FF7043', 
+    paddingVertical: 16, 
+    width: width * 0.8, 
+    borderRadius: 12, 
+    alignItems: 'center',
+    marginVertical: 8, 
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.22,
+    shadowRadius: 3,
   },
   buttonText: { 
     color: 'white', 
-    fontSize: 18, 
-    fontWeight: 'bold' 
-  },
+    fontSize: 15, 
+    fontWeight: 'bold',
+    letterSpacing: 1
+  }
 });
