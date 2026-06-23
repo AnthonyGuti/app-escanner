@@ -1,7 +1,7 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Graph3D from '../components/Graph3D';
 import { guardarResultadoEstadistico } from '../services/_databaseService';
 
@@ -15,6 +15,7 @@ interface EjercicioData {
   enunciado_completo: string;
   datos_variable_x: number[];
   datos_variable_y: number[];
+  tipo?: string; // NUEVO: Para saber si es lineal o logístico
 }
 
 export default function Scanner() {
@@ -24,6 +25,9 @@ export default function Scanner() {
   const [showHint, setShowHint] = useState(true);
   const [ejercicio, setEjercicio] = useState<EjercicioData | null>(null);
   const [loading, setLoading] = useState(false);
+  
+  // NUEVO: Estado para controlar si el gráfico está en pantalla completa
+  const [pantallaCompleta, setPantallaCompleta] = useState(false);
 
   // ── Descarga el ejercicio con la sintaxis estándar de Expo Go ───────────
   useEffect(() => {
@@ -31,14 +35,11 @@ export default function Scanner() {
       if (!scannedData) return;
       setLoading(true);
       try {
-        // Buscamos el documento en la colección 'ejercicios' de forma estándar
         const docRef = doc(db, 'ejercicios', scannedData);
         const docSnap = await getDoc(docRef);
         
         if (docSnap.exists()) {
-          // Extraemos los datos del documento
           const datosDoc = docSnap.data();
-          
           if (datosDoc) {
             setEjercicio(datosDoc as EjercicioData);
             setStep(3);
@@ -66,9 +67,10 @@ export default function Scanner() {
   
   const xData: number[] = ejercicio?.datos_variable_x || [];
   const yData: number[] = ejercicio?.datos_variable_y || [];
+  const tipoModelo = ejercicio?.tipo || 'linear'; // Por defecto lineal
 
   const enunciado = ejercicio?.enunciado_completo?.toLowerCase() || "";
-  const esIQ       = enunciado.includes("iq") || enunciado.includes("coeficiente");
+  const esIQ      = enunciado.includes("iq") || enunciado.includes("coeficiente");
   const esAnsiedad = enunciado.includes("ansiedad") || enunciado.includes("estres");
 
   // ── Cálculo de regresión ─────────────────────────────────────────────────
@@ -95,8 +97,7 @@ export default function Scanner() {
 
       if (esIQ) {
         if (m > 0) {
-          if (abs >= 0.5)
-            return { icono: '🧠', color: '#00e5ff', texto: 'Los estudiantes con mayor coeficiente intelectual tienden a obtener calificaciones notablemente más altas.' };
+          if (abs >= 0.5) return { icono: '🧠', color: '#00e5ff', texto: 'Los estudiantes con mayor coeficiente intelectual tienden a obtener calificaciones notablemente más altas.' };
           return { icono: '🧠', color: '#B39DDB', texto: 'El coeficiente intelectual influye en la calificación, aunque otros factores también juegan un papel importante.' };
         }
         return { icono: '⚠️', color: '#FF7043', texto: 'La recta sugiere que a mayor IQ las notas bajan, lo que puede indicar datos atípicos o un grupo muy específico.' };
@@ -104,18 +105,21 @@ export default function Scanner() {
 
       if (esAnsiedad) {
         if (m < 0) {
-          if (abs >= 0.5)
-            return { icono: '😰', color: '#FF7043', texto: 'A mayor nivel de ansiedad, las notas caen de forma considerable. Gestionar el estrés es clave para el rendimiento.' };
+          if (abs >= 0.5) return { icono: '😰', color: '#FF7043', texto: 'A mayor nivel de ansiedad, las notas caen de forma considerable. Gestionar el estrés es clave para el rendimiento.' };
           return { icono: '😰', color: '#B39DDB', texto: 'La ansiedad afecta ligeramente las notas, aunque el efecto es moderado en este grupo.' };
         }
         return { icono: '🔍', color: '#00e5ff', texto: 'En este grupo, mayor ansiedad no implica peor nota. Podría tratarse de un perfil que trabaja mejor bajo presión.' };
+      }
+
+      if (tipoModelo === 'logistic') {
+         return { icono: '⚡', color: '#00e5ff', texto: 'Modelo Logístico detectado. La curva en S predice la probabilidad de que el evento ocurra basándose en los datos.' };
       }
 
       if (m > 0) return { icono: '📈', color: '#00e5ff', texto: 'La recta de ajuste es creciente: cuando X aumenta, Y también tiende a subir.' };
       if (m < 0) return { icono: '📉', color: '#FF7043', texto: 'La recta de ajuste es decreciente: cuando X sube, Y tiende a bajar.' };
       return { icono: '➡️', color: '#B39DDB', texto: 'La recta es casi horizontal: X no parece influir en Y en este conjunto de datos.' };
     },
-    [esIQ, esAnsiedad]
+    [esIQ, esAnsiedad, tipoModelo]
   );
 
   // ── Guardado automático del historial ────────────────────────────────────
@@ -132,6 +136,25 @@ export default function Scanner() {
       qr:        scannedData,
     });
   }, [regresion, scannedData, generarAnalisis, ejercicio]);
+
+  // Iconos para los botones de expandir y minimizar
+  const IconoExpandir = () => (
+    <View style={iconStyles.wrapper}>
+      <View style={[iconStyles.corner, { top: 0, left: 0, borderTopWidth: 3, borderLeftWidth: 3 }]} />
+      <View style={[iconStyles.corner, { top: 0, right: 0, borderTopWidth: 3, borderRightWidth: 3 }]} />
+      <View style={[iconStyles.corner, { bottom: 0, left: 0, borderBottomWidth: 3, borderLeftWidth: 3 }]} />
+      <View style={[iconStyles.corner, { bottom: 0, right: 0, borderBottomWidth: 3, borderRightWidth: 3 }]} />
+    </View>
+  );
+
+  const IconoMinimizar = () => (
+    <View style={iconStyles.wrapper}>
+      <View style={[iconStyles.corner, { top: 0, left: 0, borderBottomWidth: 3, borderRightWidth: 3, borderColor: '#00e5ff' }]} />
+      <View style={[iconStyles.corner, { top: 0, right: 0, borderBottomWidth: 3, borderLeftWidth: 3, borderColor: '#00e5ff' }]} />
+      <View style={[iconStyles.corner, { bottom: 0, left: 0, borderTopWidth: 3, borderRightWidth: 3, borderColor: '#00e5ff' }]} />
+      <View style={[iconStyles.corner, { bottom: 0, right: 0, borderTopWidth: 3, borderLeftWidth: 3, borderColor: '#00e5ff' }]} />
+    </View>
+  );
 
   // ── Permisos de cámara ───────────────────────────────────────────────────
   if (!permission?.granted) {
@@ -207,18 +230,25 @@ export default function Scanner() {
             </View>
 
             <View style={[styles.floatingGraphWrapper, styles.perspectiveGraph]}>
-              <Graph3D xData={xData} yData={yData} />
+              {/* Ocultamos el pequeño si el grande está abierto para optimizar memoria 3D */}
+              {!pantallaCompleta && (
+                 <Graph3D xData={xData} yData={yData} type={tipoModelo as "linear"|"logistic"} transparente={true} />
+              )}
               {showHint && (
                 <View pointerEvents="none" style={styles.hintCloud}>
                   <Text style={styles.hintText}>👆 Usa gestos para rotar o zoom</Text>
                 </View>
               )}
+              {/* BOTÓN PARA EXPANDIR */}
+              <TouchableOpacity style={styles.btnExpand} onPress={() => setPantallaCompleta(true)}>
+                <IconoExpandir />
+              </TouchableOpacity>
             </View>
 
             {regresion && (
               <View style={[styles.glassPanel, styles.perspectiveLeft, { marginTop: 5 }]}>
                 <Text style={styles.equationValue}>
-                  Y = {regresion.m.toFixed(2)}X + {regresion.b.toFixed(2)}
+                  {tipoModelo === 'logistic' ? 'Y = f(X)' : `Y = ${regresion.m.toFixed(2)}X + ${regresion.b.toFixed(2)}`}
                 </Text>
               </View>
             )}
@@ -246,6 +276,20 @@ export default function Scanner() {
         </View>
       )}
 
+      {/* --- MODAL DE GRÁFICO TRANSPARENTE EN PANTALLA COMPLETA --- */}
+      <Modal visible={pantallaCompleta} animationType="fade" transparent={true} statusBarTranslucent={true}>
+        <View style={styles.modalTransparentContainer}>
+          <View style={styles.modalGraphWrapper}>
+            {pantallaCompleta && (
+              <Graph3D key={`modal-ar-${xData.length}`} xData={xData} yData={yData} type={tipoModelo as "linear"|"logistic"} transparente={true} setLockScroll={() => {}} />
+            )}
+          </View>
+          <TouchableOpacity style={styles.btnMinimize} onPress={() => setPantallaCompleta(false)}>
+            <IconoMinimizar />
+          </TouchableOpacity>
+        </View>
+      </Modal>
+
       <TouchableOpacity style={styles.backBtnGlass} onPress={() => router.back()}>
         <Text style={styles.btnText}>SALIR</Text>
       </TouchableOpacity>
@@ -253,6 +297,12 @@ export default function Scanner() {
     </View>
   );
 }
+
+// Estilos de los iconos
+const iconStyles = StyleSheet.create({
+  wrapper: { width: 20, height: 20, position: 'relative' },
+  corner: { position: 'absolute', width: 8, height: 8, borderColor: '#ffffff' },
+});
 
 const styles = StyleSheet.create({
   container:            { flex: 1, backgroundColor: 'transparent' }, 
@@ -288,4 +338,50 @@ const styles = StyleSheet.create({
   backBtnGlass:         { position: 'absolute', top: 50, left: 20, backgroundColor: 'rgba(255, 255, 255, 0.2)', padding: 10, borderRadius: 12, zIndex: 200 },
   btnOrange:            { backgroundColor: '#FF7043', padding: 15, borderRadius: 10 },
   btnText:              { color: 'white', fontWeight: 'bold' },
+  
+  /* --- ESTILOS DEL MODAL TRANSPARENTE --- */
+  btnExpand: { 
+    position: 'absolute', 
+    top: 10, 
+    right: 10, 
+    backgroundColor: 'rgba(0, 229, 255, 0.3)', 
+    width: 44, 
+    height: 44, 
+    borderRadius: 10, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    zIndex: 10,
+    borderWidth: 1,
+    borderColor: '#00e5ff'
+  },
+  modalTransparentContainer: { 
+    flex: 1, 
+    // Fondo oscuro translúcido para que la cámara se siga viendo debajo
+    backgroundColor: 'rgba(0,0,0,0.6)', 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  modalGraphWrapper: { 
+    width: '90%', 
+    height: '75%', 
+    backgroundColor: 'rgba(10, 10, 30, 0.3)', 
+    borderRadius: 20, 
+    borderWidth: 2, 
+    borderColor: '#00e5ff', 
+    overflow: 'hidden' 
+  },
+  btnMinimize: { 
+    position: 'absolute', 
+    top: 60, 
+    right: 30, 
+    backgroundColor: 'rgba(0, 229, 255, 0.2)', 
+    width: 50, 
+    height: 50, 
+    borderRadius: 12, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    zIndex: 99,
+    borderWidth: 1,
+    borderColor: '#00e5ff'
+  },
 });

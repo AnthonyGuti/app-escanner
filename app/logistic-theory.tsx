@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Graph3D from '../components/Graph3D';
 
-export default function LinearTheory() {
+export default function LogisticTheory() {
   const navigation = useNavigation();
   const [isFocused, setIsFocused] = useState(true);
   const [xInput, setXInput] = useState("");
@@ -27,6 +27,11 @@ export default function LinearTheory() {
     }
     const valX = parseFloat(xInput.replace(',', '.'));
     const valY = parseFloat(yInput.replace(',', '.'));
+    
+    if (valY !== 0 && valY !== 1) {
+      Alert.alert("Nota Educativa", "En la regresión logística, los valores de Y suelen ser 0 (No) o 1 (Sí).");
+    }
+
     setDatosX(prev => [...prev, valX]);
     setDatosY(prev => [...prev, valY]);
     setXInput(""); setYInput("");
@@ -34,7 +39,7 @@ export default function LinearTheory() {
 
   const reiniciarGrafica = () => { setDatosX([]); setDatosY([]); setXInput(""); setYInput(""); };
 
-  const regresionLineal = useMemo(() => {
+  const regresionLogistica = useMemo(() => {
     const n = datosX.length;
     if (n < 2) return null;
     let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
@@ -72,21 +77,42 @@ export default function LinearTheory() {
   return (
     <ScrollView style={styles.container} scrollEnabled={!scrollOcupado}>
       <Stack.Screen options={{ headerShown: false }} />
+      
       <View style={styles.header}>
         <TouchableOpacity style={styles.backArrow} onPress={() => router.replace('/')}><Text style={styles.backArrowText}>←</Text></TouchableOpacity>
-        <View style={styles.headerTextContainer}><Text style={styles.title}>Regresión Lineal</Text><Text style={styles.subtitle}>Universidad Indoamérica</Text></View>
+        <View style={styles.headerTextContainer}><Text style={styles.title}>Regresión Logística</Text><Text style={styles.subtitle}>Universidad Indoamérica</Text></View>
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>¿Qué es la Regresión Lineal?</Text>
-        <Text style={styles.content}>Modelo que busca la <Text style={styles.highlight}>línea recta</Text> que mejor se ajusta a un conjunto de puntos, ideal para tendencias constantes.</Text>
+        <Text style={styles.cardTitle}>¿Qué es la Regresión Logística?</Text>
+        <Text style={styles.content}>
+          Es un modelo que clasifica datos usando una <Text style={styles.highlight}>curva en forma de "S"</Text> (Curva Sigmoide). En lugar de predecir valores continuos, calcula la probabilidad de que un evento ocurra (valores entre 0 y 1).
+        </Text>
       </View>
 
+      {/* TARJETA 2: ECUACIÓN CON ESPACIADO PERFECTO */}
       <View style={styles.card}>
         <Text style={styles.cardTitle}>La Ecuación Matemática</Text>
-        <View style={styles.formulaBox}><Text style={styles.formula}>y = mx + b</Text></View>
-        <Text style={styles.termText}><Text style={styles.termLabel}>• m (Pendiente):</Text> Inclinación de la recta.</Text>
-        <Text style={styles.termText}><Text style={styles.termLabel}>• b (Intercepto):</Text> Punto de corte en Y.</Text>
+        
+        <View style={styles.formulaBox}>
+          <View style={styles.formulaContainer}>
+            <Text style={styles.formulaY}>y =</Text>
+            <View style={styles.fractionContainer}>
+              <View style={styles.numeratorBox}>
+                <Text style={styles.numerator}>1</Text>
+              </View>
+              <View style={styles.fractionLine} />
+              <View style={styles.denominatorBase}>
+                <Text style={styles.denominatorText}>1 + e</Text>
+                <Text style={styles.superscriptText}>-f(x)</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        <Text style={styles.termText}><Text style={styles.termLabel}>• y (Probabilidad):</Text> El resultado final (mapeado de 0 a 1).</Text>
+        <Text style={styles.termText}><Text style={styles.termLabel}>• e (Euler):</Text> Constante matemática fundamental (~2.718).</Text>
+        <Text style={styles.termText}><Text style={styles.termLabel}>• f(x):</Text> La función lineal de ajuste matemático (mx + b).</Text>
       </View>
 
       <View style={styles.card}>
@@ -94,7 +120,7 @@ export default function LinearTheory() {
         <View style={styles.graphWrapper}>
           <View style={styles.graphContainer}>
             {isFocused && !pantallaCompleta ? (
-              <Graph3D key={`normal-${datosX.length}`} xData={datosX} yData={datosY} type="linear" setLockScroll={setScrollOcupado} transparente={true} />
+              <Graph3D key={`normal-${datosX.length}`} xData={datosX} yData={datosY} type="logistic" setLockScroll={setScrollOcupado} transparente={true} />
             ) : <View style={styles.loaderContainer}><Text style={{ color: '#B39DDB' }}>Simulador activo</Text></View>}
           </View>
           <TouchableOpacity style={styles.btnExpand} onPress={() => setPantallaCompleta(true)}><IconoExpandir /></TouchableOpacity>
@@ -102,26 +128,44 @@ export default function LinearTheory() {
         
         <View style={styles.inputRow}>
           <View style={styles.inputGroup}>
-            <TextInput style={styles.input} keyboardType="numeric" placeholder="Punto X" placeholderTextColor="#B0BEC5" value={xInput} onChangeText={setXInput} />
+            <TextInput style={styles.input} keyboardType="numeric" placeholder="Valor X" placeholderTextColor="#B0BEC5" value={xInput} onChangeText={setXInput} />
             <TouchableOpacity style={styles.btnSigno} onPress={() => toggleSigno(setXInput, xInput)}><Text style={styles.btnSignoText}>+/-</Text></TouchableOpacity>
           </View>
           <View style={styles.inputGroup}>
-            <TextInput style={styles.input} keyboardType="numeric" placeholder="Punto Y" placeholderTextColor="#B0BEC5" value={yInput} onChangeText={setYInput} />
-            <TouchableOpacity style={styles.btnSigno} onPress={() => toggleSigno(setYInput, yInput)}><Text style={styles.btnSignoText}>+/-</Text></TouchableOpacity>
+            <TextInput style={styles.input} keyboardType="numeric" placeholder="Valor Y (0 o 1)" placeholderTextColor="#B0BEC5" value={yInput} onChangeText={setYInput} />
           </View>
           <TouchableOpacity onPress={agregarDato} style={styles.btnAdd}><Text style={styles.btnAddText}>+</Text></TouchableOpacity>
         </View>
         
         <TouchableOpacity onPress={reiniciarGrafica} style={styles.btnReset}><Text style={styles.btnResetText}>LIMPIAR PUNTOS</Text></TouchableOpacity>
-        {regresionLineal && (
-          <View style={styles.resultBox}><Text style={styles.resultFormula}>y = {regresionLineal.m.toFixed(2)}x {regresionLineal.b >= 0 ? '+' : '-'} {Math.abs(regresionLineal.b).toFixed(2)}</Text></View>
+        
+        {/* RESULTADO DINÁMICO ARREGLADO */}
+        {regresionLogistica && (
+          <View style={styles.resultBox}>
+            <Text style={styles.resultFormulaTitle}>Modelo obtenido en tiempo real:</Text>
+            <View style={styles.formulaContainer}>
+              <Text style={[styles.formulaY, { fontSize: 24 }]}>y =</Text>
+              <View style={styles.fractionContainer}>
+                <View style={styles.numeratorBox}>
+                  <Text style={[styles.numerator, { fontSize: 20 }]}>1</Text>
+                </View>
+                <View style={styles.fractionLine} />
+                <View style={styles.denominatorBase}>
+                  <Text style={[styles.denominatorText, { fontSize: 20 }]}>1 + e</Text>
+                  <Text style={[styles.superscriptText, { fontSize: 13 }]}>
+                    -({regresionLogistica.m.toFixed(2)}x {regresionLogistica.b >= 0 ? '+' : '-'} {Math.abs(regresionLogistica.b).toFixed(2)})
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </View>
         )}
       </View>
 
       <Modal visible={pantallaCompleta} animationType="fade" transparent={false} statusBarTranslucent={true}>
         <View style={styles.modalContainer}>
           <View style={styles.modalGraphWrapper}>
-            {isFocused && pantallaCompleta && <Graph3D key={`modal-${datosX.length}`} xData={datosX} yData={datosY} type="linear" setLockScroll={() => {}} transparente={false} />}
+            {isFocused && pantallaCompleta && <Graph3D key={`modal-${datosX.length}`} xData={datosX} yData={datosY} type="logistic" setLockScroll={() => {}} transparente={false} />}
           </View>
           <TouchableOpacity style={styles.btnMinimize} onPress={() => setPantallaCompleta(false)}><IconoMinimizar /></TouchableOpacity>
         </View>
@@ -152,8 +196,65 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 18, fontWeight: 'bold', color: '#FF7043', marginBottom: 10 },
   content: { fontSize: 15, color: 'white', lineHeight: 22 },
   highlight: { fontWeight: 'bold', color: '#00e5ff' },
-  formulaBox: { backgroundColor: '#2a004f', padding: 15, borderRadius: 10, alignItems: 'center', marginVertical: 10 },
-  formula: { fontSize: 28, fontWeight: 'bold', color: '#00e5ff' },
+  
+  /* --- ESTILOS MEJORADOS PARA LA FÓRMULA --- */
+  formulaBox: { 
+    backgroundColor: '#2a004f', 
+    paddingVertical: 25, 
+    paddingHorizontal: 15, 
+    borderRadius: 10, 
+    alignItems: 'center', 
+    marginVertical: 15, 
+    width: '100%' 
+  },
+  formulaContainer: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'center' 
+  },
+  formulaY: { 
+    fontSize: 32, 
+    fontWeight: 'bold', 
+    color: '#00e5ff', 
+    marginRight: 12 
+  },
+  fractionContainer: { 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    minWidth: 80 
+  },
+  numeratorBox: {
+    paddingBottom: 8, // Empuja el número 1 hacia arriba para dar espacio a la línea
+  },
+  numerator: { 
+    fontSize: 26, 
+    fontWeight: 'bold', 
+    color: '#00e5ff',
+  },
+  fractionLine: { 
+    height: 3, // Línea un poco más gruesa
+    backgroundColor: '#00e5ff', 
+    width: '100%', 
+    borderRadius: 2
+  },
+  denominatorBase: { 
+    flexDirection: 'row', 
+    alignItems: 'flex-start', // Esto es clave: alinea el exponente arriba y el texto abajo
+    paddingTop: 8, // Espacio debajo de la línea de fracción
+  },
+  denominatorText: { 
+    fontSize: 26, 
+    fontWeight: 'bold', 
+    color: '#00e5ff',
+    marginTop: 6, // Baja el "1 + e" para que el exponente quede más arriba
+  },
+  superscriptText: { 
+    fontSize: 16, 
+    fontWeight: 'bold', 
+    color: '#00e5ff', 
+    marginLeft: 2,
+  },
+  
   termText: { color: 'white', fontSize: 15, marginBottom: 5 },
   termLabel: { color: '#FF7043', fontWeight: 'bold' },
   graphWrapper: { position: 'relative', marginBottom: 15 },
@@ -172,8 +273,8 @@ const styles = StyleSheet.create({
   btnAddText: { fontSize: 24, fontWeight: 'bold', color: '#000' },
   btnReset: { backgroundColor: 'rgba(255, 112, 67, 0.2)', padding: 12, borderRadius: 10, alignItems: 'center', marginBottom: 10 },
   btnResetText: { color: '#FF7043', fontWeight: 'bold' },
-  resultBox: { padding: 10, backgroundColor: 'rgba(0,229,255,0.1)', borderRadius: 10 },
-  resultFormula: { color: '#00e5ff', fontSize: 20, fontWeight: 'bold', textAlign: 'center' },
+  resultBox: { paddingVertical: 20, paddingHorizontal: 15, backgroundColor: 'rgba(0,229,255,0.1)', borderRadius: 10, width: '100%', alignItems: 'center' },
+  resultFormulaTitle: { color: 'white', fontSize: 15, fontWeight: '500', marginBottom: 15 },
   buttonMain: { backgroundColor: '#34C759', marginHorizontal: 20, padding: 18, borderRadius: 12, alignItems: 'center', marginTop: 10, elevation: 4 },
   buttonText: { color: 'white', fontWeight: 'bold', fontSize: 16 },
 });

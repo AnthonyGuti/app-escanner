@@ -5,386 +5,312 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AppRA - Panel Indoamérica</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        :root { 
-            --morado-indo: #51007a; 
-            --naranja-indo: #e85a06; 
-            --fondo-gris: #f5f2f7;
-        }
-        body { background-color: var(--fondo-gris); font-family: 'Segoe UI', sans-serif; }
+        :root { --morado-indo: #51007a; --naranja-indo: #e85a06; --fondo-gris: #f5f2f7; }
+        body { background-color: var(--fondo-gris); font-family: 'Segoe UI', sans-serif; transition: 0.3s; }
         
-        /* Barra de navegación principal */
-        .navbar-indo { 
-            background-color: var(--morado-indo); 
-            border-bottom: 5px solid var(--naranja-indo); 
-        }
-        .card-header-indo { 
-            background-color: var(--morado-indo); 
-            color: white; 
-            font-weight: bold; 
-        }
-        .btn-naranja { 
-            background-color: var(--naranja-indo); 
-            color: white; 
-            font-weight: bold; 
-            border: none; 
-        }
-        .btn-naranja:hover { 
-            background-color: #c94d03; 
-            color: white; 
-        }
+        /* Barra de navegación - Ligeramente más alta para el logo grande */
+        .navbar-indo { background-color: var(--morado-indo); border-bottom: 5px solid var(--naranja-indo); padding-top: 10px; padding-bottom: 10px; }
         
-        /* Ajuste del logo rectangular en la barra superior */
+        /* LOGO MÁS GRANDE */
         .logo-nav { 
-            height: 45px; 
-            margin-right: 15px; 
+            height: 70px; /* Aumentado de 48px a 70px */
+            width: auto; 
+            max-width: 250px; /* Permite que se expanda horizontalmente */
+            object-fit: contain; 
+            margin-right: 20px; /* Un poco más de separación del texto */
             background: #ffffff; 
-            border-radius: 6px; 
-            padding: 4px 8px; 
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            border-radius: 8px; 
+            padding: 6px 12px; 
         }
-        /* =========================
-            MODO OSCURO
-            ========================= */
-
-            .dark-mode {
-                background-color: #0f172a !important;
-                color: white !important;
-            }
-
-            .dark-mode .card {
-                background-color: #1e293b !important;
-                color: white !important;
-            }
-
-            .dark-mode .card-body {
-                background-color: #1e293b !important;
-            }
-
-            .dark-mode .form-control {
-                background-color: #0f172a !important;
-                border-color: #334155 !important;
-                color: white !important;
-            }
-
-            .dark-mode .form-control::placeholder {
-                color: #94a3b8 !important;
-            }
-
-            .dark-mode .table {
-                color: white !important;
-            }
-
-            .dark-mode .table-custom thead {
-                background-color: #1e293b !important;
-            }
-
-            .dark-mode td {
-                background-color: #111827 !important;
-                color: white !important;
-            }
-
-            .dark-mode .text-secondary,
-            .dark-mode .form-label {
-                color: #cbd5e1 !important;
-            }
-
-            .dark-mode .btn-outline-morado {
-                border-color: #c084fc !important;
-                color: #c084fc !important;
-            }
-
-            .dark-mode .btn-outline-morado:hover {
-                background-color: #c084fc !important;
-                color: black !important;
-            }
         
-        #qrcode img { margin: 0 auto; border: 8px solid white; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        /* Texto al lado del logo, un poco más grande para equilibrar */
+        .navbar-brand { font-size: 1.4rem; }
+
+        .card-header-indo { background-color: var(--morado-indo); color: white; font-weight: bold; border-radius: 12px 12px 0 0 !important; padding: 15px 20px; font-size: 1.1rem; }
+        .btn-naranja { background-color: var(--naranja-indo); color: white; font-weight: bold; border: none; transition: 0.3s; }
+        .btn-naranja:hover { background-color: #c94d03; transform: translateY(-2px); }
+        
+        /* Pestañas */
+        .nav-tabs .nav-link { color: var(--morado-indo); font-weight: bold; border: none; padding: 12px 20px; }
+        .nav-tabs .nav-link.active { background-color: var(--morado-indo) !important; color: white !important; border-radius: 8px 8px 0 0; }
+        
+        /* Espaciado en la tabla para que respire */
+        .table-custom td, .table-custom th { padding: 15px; }
         .table-custom thead { background-color: var(--morado-indo); color: white; }
+        
         .btn-outline-morado { border-color: var(--morado-indo); color: var(--morado-indo); }
         .btn-outline-morado:hover { background-color: var(--morado-indo); color: white; }
+
+        /* Modo Oscuro */
+        .dark-mode { background-color: #0f172a !important; color: white !important; }
+        .dark-mode .card { background-color: #1e293b !important; color: white !important; border: 1px solid #334155; }
+        .dark-mode .form-control { background-color: #0f172a !important; border-color: #334155 !important; color: white !important; }
+        .dark-mode td { background-color: #1e293b !important; color: white !important; border-bottom: 1px solid #334155; }
+        .dark-mode .table { color: white !important; }
     </style>
-     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-
 </head>
 <body>
 
 <nav class="navbar navbar-dark navbar-indo mb-4 shadow">
-    <div class="container-fluid px-4">
-
+    <div class="container-fluid px-4 px-lg-5">
         <a class="navbar-brand d-flex align-items-center fw-bold" href="#">
-            <img src="../assets/images/logo.jpeg" alt="Logo" class="logo-nav">
-            Panel de Control - AppRA Estadística
+            <img src="../assets/images/logo.png" alt="Logo" class="logo-nav"> Panel de Control - AppRA
         </a>
-
-        <div class="d-flex gap-2">
-
-            <button 
-                class="btn btn-dark btn-sm px-3"
-                onclick="toggleDarkMode()"
-            >
-                🌙 Modo Oscuro
-            </button>
-
-            <button 
-                class="btn btn-naranja btn-sm px-3" 
-                id="btnCerrarSesion"
-            >
-                Cerrar Sesión
-            </button>
-
+        <div class="d-flex gap-3 align-items-center">
+            <button class="btn btn-dark btn-sm px-3 shadow-sm h-100" onclick="document.body.classList.toggle('dark-mode')">Modo Oscuro</button>
+            <button class="btn btn-naranja btn-sm px-3 shadow-sm h-100" id="btnCerrarSesion">Cerrar Sesión</button>
         </div>
-
     </div>
 </nav>
 
-<div class="container-fluid px-4">
-    <div class="row">
+<div class="container-fluid px-4 px-lg-5 mt-2 mb-5">
+    <div class="row g-4">
+        
         <div class="col-lg-4">
-            <div class="card shadow-sm mb-4 border-0">
-                <div class="card-header card-header-indo" id="formTitle">Nuevo Ejercicio Estadístico</div>
-                <div class="card-body p-4" style="background-color: #ffffff;">
-                    <form id="ejercicioForm">
-                        <input type="hidden" id="editId">
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold text-secondary">ID del QR (Sin espacios)</label>
-                            <input type="text" class="form-control" id="id_enunciado" required placeholder="ej: ejercicio#">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold text-secondary">Enunciado del Problema</label>
-                            <textarea class="form-control" id="enunciado_completo" rows="4" required placeholder="Escriba el problema aquí..."></textarea>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold text-secondary">Datos X (Separados por comas)</label>
-                            <input type="text" class="form-control" id="datos_x" required placeholder="1, 2, 3, 4">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold text-secondary">Datos Y (Separados por comas)</label>
-                            <input type="text" class="form-control" id="datos_y" required placeholder="10, 20, 30, 40">
-                        </div>
-                        <button type="submit" class="btn btn-naranja w-100 py-2" id="btnGuardar">Guardar y Generar QR</button>
-                        <button type="button" class="btn btn-secondary w-100 mt-2 d-none" id="btnCancelarEdicion">Cancelar Edición</button>
-                    </form>
-                </div>
-            </div>
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header card-header-indo">Configurar Ejercicio</div>
+                <div class="card-body p-4 bg-white" style="border-radius: 0 0 12px 12px;">
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold text-secondary text-uppercase mb-2">1. Selecciona el Tipo</label>
+                        <select class="form-control form-control-lg border-2 shadow-sm" id="tipo_regresion" style="border-color: var(--morado-indo);">
+                            <option value="">-- Elige una opción --</option>
+                            <option value="linear">Regresión Lineal</option>
+                            <option value="logistic">Regresión Logística</option>
+                        </select>
+                    </div>
 
-            <div class="card shadow-sm border-0 text-center d-none" id="qrContainer">
-                <div class="card-body p-4">
-                    <h6 class="fw-bold mb-3" style="color: var(--morado-indo);">QR LISTO PARA DESCARGAR</h6>
-                    <div id="qrcode" class="mb-3"></div>
-                    <button class="btn btn-success w-100 fw-bold" id="btnDescargarQR">DESCARGAR PNG</button>
+                    <form id="ejercicioForm" class="d-none mt-2">
+                        <input type="hidden" id="editId">
+                        <div class="mb-4">
+                            <label class="form-label small fw-bold text-secondary">ID del QR</label>
+                            <input type="text" class="form-control fw-bold bg-light" id="id_enunciado" readonly>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label small fw-bold text-secondary">Enunciado del Problema</label>
+                            <textarea class="form-control shadow-sm" id="enunciado_completo" rows="4" required placeholder="Escribe el problema aquí..."></textarea>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label small fw-bold text-secondary">Datos X (Ej: 1, 2, 3)</label>
+                            <input type="text" class="form-control shadow-sm" id="datos_x" required placeholder="Valores separados por coma">
+                        </div>
+                        <div class="mb-5">
+                            <label class="form-label small fw-bold text-secondary" id="label_datos_y">Datos Y (Ej: 10, 20, 30)</label>
+                            <input type="text" class="form-control shadow-sm" id="datos_y" required placeholder="Valores separados por coma">
+                        </div>
+                        <button type="submit" class="btn btn-naranja w-100 py-3 shadow" id="btnGuardar" style="border-radius: 8px;">GUARDAR Y GENERAR QR</button>
+                        <button type="button" class="btn btn-light border w-100 mt-3 py-2 fw-bold text-secondary" onclick="location.reload()" style="border-radius: 8px;">CANCELAR</button>
+                    </form>
                 </div>
             </div>
         </div>
 
         <div class="col-lg-8">
-            <div class="card shadow-sm border-0">
-                <div class="card-header card-header-indo">Base de Ejercicios Registrados</div>
-                <div class="card-body p-0 table-responsive">
-                    <table class="table table-hover align-middle mb-0 table-custom">
-                        <thead class="small text-uppercase">
-                            <tr>
-                                <th class="ps-4">ID QR</th>
-                                <th>Enunciado</th>
-                                <th>Datos X / Y</th>
-                                <th class="text-end pe-4">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tablaBody" class="small"></tbody>
-                    </table>
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header card-header-indo">Base de Ejercicios</div>
+                <div class="card-body p-0" style="border-radius: 0 0 12px 12px; overflow: hidden;">
+                    <ul class="nav nav-tabs px-4 pt-3 bg-light" id="tabEjercicios" role="tablist">
+                        <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#panelLineal">Lineales</button></li>
+                        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#panelLogistico">Logísticas</button></li>
+                    </ul>
+                    <div class="tab-content table-responsive p-3">
+                        <div class="tab-pane fade show active" id="panelLineal">
+                            <table class="table table-hover align-middle mb-0 table-custom">
+                                <thead class="table-dark"><tr><th style="border-radius: 8px 0 0 8px;">ID</th><th>Enunciado</th><th>Datos (X/Y)</th><th style="border-radius: 0 8px 8px 0;">Acciones</th></tr></thead>
+                                <tbody id="tablaLinealBody"></tbody>
+                            </table>
+                        </div>
+                        <div class="tab-pane fade" id="panelLogistico">
+                            <table class="table table-hover align-middle mb-0 table-custom">
+                                <thead class="table-dark"><tr><th style="border-radius: 8px 0 0 8px;">ID</th><th>Enunciado</th><th>Datos (X/Y)</th><th style="border-radius: 0 8px 8px 0;">Acciones</th></tr></thead>
+                                <tbody id="tablaLogisticaBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
+        
     </div>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
     import { getFirestore, doc, setDoc, collection, onSnapshot, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
     import { firebaseConfig } from "./config.js";
 
     const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
     const db = getFirestore(app);
+    const auth = getAuth(app);
+    let listaEjer = [];
 
-    onAuthStateChanged(auth, (user) => { if (!user) window.location.href = "index.html"; });
-    document.getElementById('btnCerrarSesion').addEventListener('click', () => signOut(auth));
-
-    const tablaBody = document.getElementById('tablaBody');
-    onSnapshot(collection(db, "ejercicios"), (snapshot) => {
-        tablaBody.innerHTML = "";
-        snapshot.forEach((docSnap) => {
-            const data = docSnap.data();
-            const id = docSnap.id;
-            tablaBody.innerHTML += `
-                <tr>
-                    <td class="ps-4"><strong>${id}</strong></td>
-                    <td class="text-truncate" style="max-width: 250px;">${data.enunciado_completo}</td>
-                    <td><strong>X:</strong> [${data.datos_variable_x}]<br><strong>Y:</strong> [${data.datos_variable_y}]</td>
-                    <td class="text-end pe-4">
-                        <button class="btn btn-outline-morado btn-sm btn-editar" data-id="${id}">Editar</button>
-                        <button class="btn btn-outline-danger btn-sm btn-eliminar" data-id="${id}">Borrar</button>
-                        <button class="btn btn-dark btn-sm btn-qr" data-id="${id}">QR</button>
-                    </td>
-                </tr>`;
-        });
-        asignarEventos();
-    });
-
-    const form = document.getElementById('ejercicioForm');
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const id = document.getElementById('id_enunciado').value.trim();
-        const arrayX = document.getElementById('datos_x').value.split(',').map(n => parseFloat(n.trim())).filter(n => !isNaN(n));
-        const arrayY = document.getElementById('datos_y').value.split(',').map(n => parseFloat(n.trim())).filter(n => !isNaN(n));
-
-        await setDoc(doc(db, "ejercicios", id), {
-            id_enunciado: id,
-            enunciado_completo: document.getElementById('enunciado_completo').value.trim(),
-            datos_variable_x: arrayX,
-            datos_variable_y: arrayY,
-            fecha: new Date().toISOString()
-        }, { merge: true });
-
-        form.reset();
-        mostrarQR(id);
-        alert("¡Ejercicio guardado correctamente!");
-    });
-
-    function asignarEventos() {
-        document.querySelectorAll('.btn-eliminar').forEach(b => b.addEventListener('click', async (e) => {
-            if(confirm("¿Eliminar ejercicio de la base de datos?")) await deleteDoc(doc(db, "ejercicios", e.target.dataset.id));
-        }));
-        document.querySelectorAll('.btn-qr').forEach(b => b.addEventListener('click', (e) => mostrarQR(e.target.dataset.id)));
-        document.querySelectorAll('.btn-editar').forEach(b => b.addEventListener('click', async (e) => {
-            const docRef = await getDoc(doc(db, "ejercicios", e.target.dataset.id));
-            const data = docRef.data();
-            document.getElementById('id_enunciado').value = docRef.id;
-            document.getElementById('id_enunciado').disabled = true;
-            document.getElementById('enunciado_completo').value = data.enunciado_completo;
-            document.getElementById('datos_x').value = data.datos_variable_x.join(', ');
-            document.getElementById('datos_y').value = data.datos_variable_y.join(', ');
-            document.getElementById('btnCancelarEdicion').classList.remove('d-none');
-        }));
-    }
-
-    document.getElementById('btnCancelarEdicion').addEventListener('click', () => {
-        form.reset();
-        document.getElementById('id_enunciado').disabled = false;
-        document.getElementById('btnCancelarEdicion').classList.add('d-none');
-    });
-
-    function mostrarQR(texto) {
-
-    Swal.fire({
-        width: 420,
-        background: '#ffffff',
-        padding: '1.5rem',
-
-        showCloseButton: true,
-        showCancelButton: true,
-
-        confirmButtonText: '📥 Descargar',
-        cancelButtonText: 'Cerrar',
-
-        confirmButtonColor: '#e85a06',
-        cancelButtonColor: '#51007a',
-
-        html: `
-            <div style="
-                display:flex;
-                flex-direction:column;
-                align-items:center;
-            ">
-
-                <h3 style="
-                    color:#51007a;
-                    font-weight:700;
-                    margin-bottom:12px;
-                ">
-                    Código QR
-                </h3>
-
-                <div style="
-                    background:#f1f5f9;
-                    padding:8px 16px;
-                    border-radius:12px;
-                    font-weight:700;
-                    margin-bottom:18px;
-                    color:#0f172a;
-                ">
-                    ${texto}
-                </div>
-
-                <div id="contenedorQR" style="
-                    background:white;
-                    padding:18px;
-                    border-radius:20px;
-                    border:3px solid #51007a;
-                    box-shadow:0 10px 30px rgba(0,0,0,0.12);
-                "></div>
-
-            </div>
-        `,
-
-        didOpen: () => {
-
-            new QRCode(
-                document.getElementById('contenedorQR'),
-                {
-                    text: texto,
-                    width: 220,
-                    height: 220,
-                    colorDark: "#51007a",
-                    colorLight: "#ffffff",
-                    correctLevel: QRCode.CorrectLevel.H
-                }
-            );
-
-        }
-
-    }).then((result) => {
-
-        if (result.isConfirmed) {
-
-            const imgElement =
-                document
-                .getElementById('contenedorQR')
-                .querySelector('img');
-
-            if (imgElement) {
-
-                const link =
-                    document.createElement('a');
-
-                link.download = `QR_${texto}.png`;
-                link.href = imgElement.src;
-
-                link.click();
+    // Cerrar sesión
+    document.getElementById('btnCerrarSesion').addEventListener('click', () => {
+        Swal.fire({
+            title: '¿Cerrar sesión?',
+            text: "Tendrás que volver a ingresar tus credenciales.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#e85a06',
+            cancelButtonColor: '#51007a',
+            confirmButtonText: 'Sí, salir',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                signOut(auth).then(() => {
+                    window.location.href = "index.html"; 
+                }).catch((error) => {
+                    Swal.fire("Error", "No se pudo cerrar la sesión", "error");
+                });
             }
+        });
+    });
+
+    // Secuencia
+    function calcularSecuencia(tipo) {
+        const prefijo = tipo === 'logistic' ? 'ejercicio0' : 'ejercicio';
+        const nums = listaEjer
+            .filter(e => e.id && e.id.startsWith(prefijo))
+            .map(e => parseInt(e.id.replace(prefijo, '')) || 0);
+        
+        const max = nums.length > 0 ? Math.max(...nums) : 0;
+        return prefijo + (max + 1);
+    }
+
+    // Selector
+    document.getElementById('tipo_regresion').addEventListener('change', (e) => {
+        const tipo = e.target.value;
+        const form = document.getElementById('ejercicioForm');
+        const labelY = document.getElementById('label_datos_y');
+        
+        if (!tipo) {
+            form.classList.add('d-none');
+            form.reset();
+            return;
         }
 
+        form.classList.remove('d-none');
+        
+        if(tipo === 'logistic') {
+            labelY.innerHTML = "Datos Y <span class='text-danger fw-bold'>(Ej: 0, 1, 0, 1 - Solo Ceros y Unos)</span>";
+        } else {
+            labelY.innerHTML = "Datos Y <span class='text-primary fw-bold'>(Ej: 10, 20, 30)</span>";
+        }
+        
+        form.reset();
+        document.getElementById('id_enunciado').value = calcularSecuencia(tipo);
+        document.getElementById('editId').value = "";
     });
 
-}
+    // Cargar datos
+    onSnapshot(collection(db, "ejercicios"), (snap) => {
+        listaEjer = snap.docs.map(d => ({id: d.id, ...d.data()}));
+        
+        const bodyL = document.getElementById('tablaLinealBody');
+        const bodyLog = document.getElementById('tablaLogisticaBody');
+        bodyL.innerHTML = "";
+        bodyLog.innerHTML = "";
 
-    // MODO OSCURO
-    window.toggleDarkMode = function () {
-
-        document.body.classList.toggle('dark-mode');
-
-    }
-    document.getElementById('btnDescargarQR').addEventListener('click', () => {
-        const img = document.querySelector('#qrcode img');
-        const link = document.createElement('a');
-        link.download = `QR_${document.getElementById('id_enunciado').value || 'ejercicio'}.png`;
-        link.href = img.src;
-        link.click();
+        listaEjer.forEach(d => {
+            const row = `<tr>
+                <td><span class="badge bg-secondary px-3 py-2 fs-6 rounded-pill">${d.id}</span></td>
+                <td class="text-secondary">${d.enunciado_completo || ''}</td>
+                <td>
+                    <div class="bg-light p-2 rounded border shadow-sm">
+                        <span class="text-primary fw-bold">X:</span> <small>${Array.isArray(d.datos_variable_x) ? d.datos_variable_x.join(', ') : d.datos_variable_x}</small><br>
+                        <span class="text-danger fw-bold">Y:</span> <small>${Array.isArray(d.datos_variable_y) ? d.datos_variable_y.join(', ') : d.datos_variable_y}</small>
+                    </div>
+                </td>
+                <td>
+                    <div class="d-flex flex-column gap-2">
+                        <div class="btn-group w-100">
+                            <button class="btn btn-outline-morado btn-sm fw-bold" onclick="editarEjer('${d.id}')">Editar</button>
+                            <button class="btn btn-outline-danger btn-sm fw-bold" onclick="borrarEjer('${d.id}')">Borrar</button>
+                        </div>
+                        <button class="btn btn-dark btn-sm fw-bold shadow-sm" onclick="generarQR('${d.id}')">Generar QR</button>
+                    </div>
+                </td>
+            </tr>`;
+            
+            d.tipo === 'logistic' ? bodyLog.innerHTML += row : bodyL.innerHTML += row;
+        });
     });
+
+    // Guardar
+    document.getElementById('ejercicioForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('id_enunciado').value;
+        const tipo = document.getElementById('tipo_regresion').value;
+        
+        const arrayX = document.getElementById('datos_x').value.split(',').map(s => Number(s.trim()));
+        const arrayY = document.getElementById('datos_y').value.split(',').map(s => Number(s.trim()));
+        
+        await setDoc(doc(db, "ejercicios", id), {
+            id: id,
+            tipo: tipo,
+            enunciado_completo: document.getElementById('enunciado_completo').value,
+            datos_variable_x: arrayX,
+            datos_variable_y: arrayY
+        });
+        
+        Swal.fire("Éxito", "Ejercicio guardado correctamente", "success");
+        document.getElementById('ejercicioForm').reset();
+        document.getElementById('ejercicioForm').classList.add('d-none');
+        document.getElementById('tipo_regresion').value = "";
+    });
+
+    window.editarEjer = async (id) => {
+        const docSnap = await getDoc(doc(db, "ejercicios", id));
+        if (docSnap.exists()) {
+            const d = docSnap.data();
+            document.getElementById('editId').value = id;
+            document.getElementById('id_enunciado').value = id;
+            document.getElementById('tipo_regresion').value = d.tipo;
+            
+            const labelY = document.getElementById('label_datos_y');
+            if(d.tipo === 'logistic') {
+                labelY.innerHTML = "Datos Y <span class='text-danger fw-bold'>(Ej: 0, 1, 0, 1 - Solo Ceros y Unos)</span>";
+            } else {
+                labelY.innerHTML = "Datos Y <span class='text-primary fw-bold'>(Ej: 10, 20, 30)</span>";
+            }
+
+            document.getElementById('enunciado_completo').value = d.enunciado_completo;
+            document.getElementById('datos_x').value = d.datos_variable_x.join(', ');
+            document.getElementById('datos_y').value = d.datos_variable_y.join(', ');
+            document.getElementById('ejercicioForm').classList.remove('d-none');
+            
+            // Hacer scroll suave hacia arriba para que el profe vea el formulario
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    };
+
+    window.borrarEjer = async (id) => { 
+        if(confirm("¿Seguro que quieres borrar este ejercicio? Esta acción no se puede deshacer.")) {
+            await deleteDoc(doc(db, "ejercicios", id)); 
+        }
+    };
+
+    window.generarQR = (id) => { 
+        Swal.fire({ 
+            title: 'Código QR Listo',
+            text: 'ID del Ejercicio: ' + id,
+            html: '<div id="qr" class="d-flex justify-content-center p-3 bg-white rounded border shadow-sm mx-auto" style="width: 250px;"></div>', 
+            didOpen: () => {
+                new QRCode(document.getElementById('qr'), {
+                    text: id,
+                    width: 200,
+                    height: 200,
+                    colorDark : "#51007a", 
+                    colorLight : "#ffffff",
+                    correctLevel : QRCode.CorrectLevel.H
+                });
+            }
+        }); 
+    };
 </script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

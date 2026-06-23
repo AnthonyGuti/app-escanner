@@ -10,20 +10,23 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack>
-        {/* Pantalla de Inicio (Tus dos botones principales) */}
+        {/* Pantalla de Inicio */}
         <Stack.Screen name="index" options={{ headerShown: false }} />
         
-        {/* Nueva Pantalla de Teoría de Regresión Lineal */}
+        {/* NUEVO: Tu pantalla de menú de dos botones */}
+        <Stack.Screen name="mode-selection" options={{ headerShown: false }} />
+        
+        {/* Pantalla de Teoría de Regresión Lineal */}
         <Stack.Screen 
           name="linear-theory" 
           options={{ 
-            headerShown: false // Oculta la barra blanca de arriba para usar tu diseño morado limpio
+            headerShown: false 
           }} 
         />
 
-        {/* Nueva Pantalla de Teoría de Regresión Cuadrática */}
+        {/* CORREGIDO: Ahora dice logistic-theory */}
         <Stack.Screen 
-          name="quadratic-theory" 
+          name="logistic-theory" 
           options={{ 
             headerShown: false 
           }} 
