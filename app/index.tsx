@@ -58,7 +58,7 @@ export default function Index() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#4A148C' },
-  header: { paddingTop: 60, paddingHorizontal: 15, paddingBottom: 10, backgroundColor: '#ffffff', alignItems: 'center', justifyContent: 'center' },
+  header: { paddingTop: 60, paddingHorizontal: 15, paddingBottom: 10, backgroundColor: '#4A148C', alignItems: 'center', justifyContent: 'center' },
   logo: { width: width * 0.85, height: 80 },
   content: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },
   mascot: { width: width * 0.65, height: width * 0.65, marginVertical: 15 },

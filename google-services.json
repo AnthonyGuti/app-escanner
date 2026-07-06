@@ -9,7 +9,8 @@
       "client_info": {
         "mobilesdk_app_id": "1:527014383641:android:84d931f968419291031a88",
         "android_client_info": {
-          "package_name": "com.anthony.appra"
+          "package": "com.anthony.appra",
+          "googleServicesFile": "./google-services.json"
         }
       },
       "oauth_client": [],

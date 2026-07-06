@@ -7,7 +7,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "app",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "ios": {
       "supportsTablet": true
     },
@@ -20,7 +20,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.anthonyguti.App"
+      "package": "com.anthony.appra"
     },
     "web": {
       "output": "static",
@@ -44,6 +44,12 @@
         "expo-asset",
         {
           "platforms": ["ios", "android", "web"]
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Permite a AppRA usar la cámara para escanear los códigos QR de los ejercicios estadísticos."
         }
       ]
     ],
