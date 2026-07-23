@@ -1,7 +1,7 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Graph3D from '../components/Graph3D';
 import { guardarResultadoEstadistico } from '../services/_databaseService';
 
@@ -137,7 +137,7 @@ export default function Scanner() {
     });
   }, [regresion, scannedData, generarAnalisis, ejercicio]);
 
-  // Iconos para los botones de expandir y minimizar
+  // Iconos para los botones de expandir y minimizarr
   const IconoExpandir = () => (
     <View style={iconStyles.wrapper}>
       <View style={[iconStyles.corner, { top: 0, left: 0, borderTopWidth: 3, borderLeftWidth: 3 }]} />
@@ -211,26 +211,8 @@ export default function Scanner() {
         >
           <View style={styles.zoomWrapper}>
 
-            <View style={[styles.glassPanel, styles.perspectiveLeft, { padding: 10, marginBottom: 8 }]}>
-              <Text style={styles.exerciseHeader}>ID: {ejercicio.id_enunciado || scannedData}</Text>
-              <Text style={styles.exerciseText} numberOfLines={3}>{ejercicio.enunciado_completo}</Text>
-            </View>
-
-            <View style={[styles.glassPanel, styles.perspectiveRight, { height: 130, padding: 5, marginBottom: 8 }]}>
-              <Text style={styles.sectionHeader}>Registros del Sistema</Text>
-              <ScrollView nestedScrollEnabled style={styles.arTable}>
-                {xData.map((val, i) => (
-                  <View key={i} style={styles.arTableRow}>
-                    <Text style={styles.arCell}>#{i + 1}</Text>
-                    <Text style={styles.arCell}>X: {val}</Text>
-                    <Text style={[styles.arCell, { color: '#00e5ff' }]}>Y: {yData[i]}</Text>
-                  </View>
-                ))}
-              </ScrollView>
-            </View>
-
+            {/* 1. GRÁFICA GIGANTE AL INICIO */}
             <View style={[styles.floatingGraphWrapper, styles.perspectiveGraph]}>
-              {/* Ocultamos el pequeño si el grande está abierto para optimizar memoria 3D */}
               {!pantallaCompleta && (
                  <Graph3D xData={xData} yData={yData} type={tipoModelo as "linear"|"logistic"} transparente={true} />
               )}
@@ -239,24 +221,16 @@ export default function Scanner() {
                   <Text style={styles.hintText}>👆 Usa gestos para rotar o zoom</Text>
                 </View>
               )}
-              {/* BOTÓN PARA EXPANDIR */}
               <TouchableOpacity style={styles.btnExpand} onPress={() => setPantallaCompleta(true)}>
                 <IconoExpandir />
               </TouchableOpacity>
             </View>
 
-            {regresion && (
-              <View style={[styles.glassPanel, styles.perspectiveLeft, { marginTop: 5 }]}>
-                <Text style={styles.equationValue}>
-                  {tipoModelo === 'logistic' ? 'Y = f(X)' : `Y = ${regresion.m.toFixed(2)}X + ${regresion.b.toFixed(2)}`}
-                </Text>
-              </View>
-            )}
-
+            {/* 2. ANÁLISIS EN EL MEDIO */}
             {regresion && (() => {
               const analisis = generarAnalisis(regresion.m);
               return (
-                <View style={[styles.glassPanel, styles.perspectiveRight, styles.analysisBox, { borderColor: analisis.color + '55' }]}>
+                <View style={[styles.glassPanel, styles.perspectiveRight, styles.analysisBox, { borderColor: analisis.color + '55', marginTop: 15 }]}>
                   <Text style={[styles.analysisTitle, { color: analisis.color }]}>
                     {analisis.icono}  Interpretación
                   </Text>
@@ -265,6 +239,16 @@ export default function Scanner() {
               );
             })()}
 
+            {/* 3. FÓRMULA AL FINAL */}
+            {regresion && (
+              <View style={[styles.glassPanel, styles.perspectiveLeft, { marginTop: 15, marginBottom: 5 }]}>
+                <Text style={styles.equationValue}>
+                  {tipoModelo === 'logistic' ? 'Y = f(X)' : `Y = ${regresion.m.toFixed(2)}X + ${regresion.b.toFixed(2)}`}
+                </Text>
+              </View>
+            )}
+
+            {/* BOTÓN DE REINICIO */}
             <TouchableOpacity
               style={styles.btnResetGlass}
               onPress={() => { setScannedData(null); setEjercicio(null); setStep(1); }}
@@ -327,7 +311,8 @@ const styles = StyleSheet.create({
   arTable:              { borderRadius: 10, backgroundColor: 'rgba(0, 0, 0, 0.3)' },
   arTableRow:           { flexDirection: 'row', borderBottomWidth: 0.5, borderBottomColor: 'rgba(255,255,255,0.1)', padding: 6 },
   arCell:               { flex: 1, color: '#E0E0E0', textAlign: 'center', fontSize: 11 },
-  floatingGraphWrapper: { height: 380, width: '100%', backgroundColor: 'rgba(10, 10, 30, 0.3)', borderRadius: 30, borderWidth: 2, borderColor: 'rgba(0, 229, 255, 0.7)', overflow: 'hidden' }, 
+  // AQUÍ ESTÁ EL CAMBIO DE TAMAÑO: Pasó de 380 a 480 de altura
+  floatingGraphWrapper: { height: 480, width: '100%', backgroundColor: 'rgba(10, 10, 30, 0.3)', borderRadius: 30, borderWidth: 2, borderColor: 'rgba(0, 229, 255, 0.7)', overflow: 'hidden' }, 
   hintCloud:            { position: 'absolute', top: 20, alignSelf: 'center', backgroundColor: 'rgba(0, 229, 255, 0.3)', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: '#00e5ff' },
   hintText:             { color: '#00e5ff', fontSize: 12, fontWeight: 'bold' },
   equationValue:        { color: '#00e5ff', fontSize: 24, fontWeight: 'bold', textAlign: 'center', textShadowColor: '#00e5ff', textShadowRadius: 10 },
@@ -356,7 +341,6 @@ const styles = StyleSheet.create({
   },
   modalTransparentContainer: { 
     flex: 1, 
-    // Fondo oscuro translúcido para que la cámara se siga viendo debajo
     backgroundColor: 'rgba(0,0,0,0.6)', 
     justifyContent: 'center', 
     alignItems: 'center' 
