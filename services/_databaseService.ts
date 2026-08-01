@@ -23,8 +23,9 @@ export const guardarResultadoEstadistico = async (idEnunciado: string, datos: an
       },
       analisis_grafico: datos.analisis,
       qr_origen: datos.qr,
+      tipo: datos.tipo, // <--- CAMBIO 1: Guardamos el tipo de ejercicio
       fecha_registro: new Date().toISOString()
-    });
+    }, { merge: true }); // <--- CAMBIO 2: El escudo protector para solo actualizar
 
     console.log("¡Datos guardados en la nube con éxito!");
     return true;

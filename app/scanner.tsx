@@ -126,6 +126,7 @@ export default function Scanner() {
   useEffect(() => {
     if (!regresion || !scannedData || !ejercicio) return;
     const infoAnalisis = generarAnalisis(regresion.m);
+    
     guardarResultadoEstadistico(scannedData, {
       enunciado: ejercicio.enunciado_completo,
       x:         xData,
@@ -134,8 +135,9 @@ export default function Scanner() {
       b:         regresion.b,
       analisis:  infoAnalisis.texto,
       qr:        scannedData,
+      tipo:      tipoModelo // <--- ¡AÑADE ESTA LÍNEA!
     });
-  }, [regresion, scannedData, generarAnalisis, ejercicio]);
+  }, [regresion, scannedData, generarAnalisis, ejercicio, tipoModelo]);
 
   // Iconos para los botones de expandir y minimizarr
   const IconoExpandir = () => (

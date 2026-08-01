@@ -235,7 +235,14 @@
                 </td>
             </tr>`;
             
-            d.tipo === 'logistic' ? bodyLog.innerHTML += row : bodyL.innerHTML += row;
+            if (d.tipo === 'logistic') {
+            // Si es logístico, va a la tabla logística
+            bodyLog.innerHTML += row;
+        } else if (d.tipo === 'linear') {
+            // Si es lineal, va a la tabla lineal
+            bodyL.innerHTML += row;
+        } 
+        // Si no es ninguno de los dos, simplemente lo ignoramos para que no se mezcle.
         });
     });
 
