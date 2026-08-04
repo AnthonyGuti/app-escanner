@@ -53,7 +53,7 @@ export default function Graph3D({ xData, yData, setLockScroll, transparente = tr
   const panResponder = PanResponder.create({
     onStartShouldSetPanResponder: () => true,
     onMoveShouldSetPanResponder: () => true,
-    onPanResponderTerminationRequest: () => false, // Evita que la cámara nativa o el scroll roben el gesto
+    onPanResponderTerminationRequest: () => false,
 
     onPanResponderGrant: (evt) => {
       setLockScroll?.(true);
@@ -69,28 +69,21 @@ export default function Graph3D({ xData, yData, setLockScroll, transparente = tr
     onPanResponderMove: (evt) => {
       const t = evt.nativeEvent.touches;
       
-      // SI HAY 2 DEDOS: Zoom natural por diferencia de distancia (Pinch to Zoom)
       if (t.length === 2) {
         const currentDist = calcDistance(t[0], t[1]);
         if (lastPinchDist.current !== null) {
-          // El cambio de distancia entre el frame anterior y el actual
           const delta = currentDist - lastPinchDist.current;
-          
-          // Factor de velocidad (0.12 hace que responda instantáneamente y suave)
           const sensibilidad = 0.12; 
           
-          // Si los dedos se separan (delta positivo), el zoom disminuye (se acerca la cámara)
           zoom.current -= delta * sensibilidad;
           
-          // Restringir límites para que no se rompa la escena
           if (zoom.current < minZoom) zoom.current = minZoom;
           if (zoom.current > maxZoom) zoom.current = maxZoom;
         }
         lastPinchDist.current = currentDist;
       } 
-      // SI HAY 1 DEDO: Rotación orbital libre
       else if (t.length === 1) {
-        lastPinchDist.current = null; // Resetear zoom por si venía de usar 2 dedos
+        lastPinchDist.current = null;
         if (lastTouch.current) {
           const deltaX = t[0].pageX - lastTouch.current.x;
           const deltaY = t[0].pageY - lastTouch.current.y;
@@ -114,21 +107,21 @@ export default function Graph3D({ xData, yData, setLockScroll, transparente = tr
     },
   });
 
-  const createBlockLabel = (type: 'X' | 'Y' | 'Z') => {
+  const createBlockLabel = (typeLabel: 'X' | 'Y' | 'Z') => {
     const group = new THREE.Group();
     const mat = new THREE.MeshBasicMaterial({ color: transparente ? 0xffffff : 0x000000 });
-    if (type === 'X') {
+    if (typeLabel === 'X') {
       const geo = new THREE.BoxGeometry(0.2, 1.3, 0.2);
       const b1 = new THREE.Mesh(geo, mat); b1.rotation.z = Math.PI / 4;
       const b2 = new THREE.Mesh(geo, mat); b2.rotation.z = -Math.PI / 4;
       group.add(b1, b2);
-    } else if (type === 'Y') {
+    } else if (typeLabel === 'Y') {
       const armGeo = new THREE.BoxGeometry(0.2, 0.8, 0.2);
       const lA = new THREE.Mesh(armGeo, mat); lA.position.set(-0.3, 0.4, 0); lA.rotation.z = Math.PI / 4;
       const rA = new THREE.Mesh(armGeo, mat); rA.position.set(0.3, 0.4, 0); rA.rotation.z = -Math.PI / 4;
       const st = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.7, 0.2), mat); st.position.y = -0.2;
       group.add(lA, rA, st);
-    } else if (type === 'Z') {
+    } else if (typeLabel === 'Z') {
       const bar = new THREE.BoxGeometry(1.1, 0.2, 0.2);
       const t = new THREE.Mesh(bar, mat); t.position.y = 0.5;
       const b = new THREE.Mesh(bar, mat); b.position.y = -0.5;
@@ -287,16 +280,28 @@ export default function Graph3D({ xData, yData, setLockScroll, transparente = tr
             if (canDrawLine && animProgress.current < 1) {
               animProgress.current += 0.01;
               const pts: THREE.Vector3[] = [];
-              const steps = 20;
+              
+              // Verificamos qué tipo de modelo estamos dibujando
+              const isLogistic = type === 'logistic';
+              const steps = isLogistic ? 80 : 20;
               const limit = Math.floor(steps * animProgress.current);
+              
               for (let i = 0; i <= limit; i++) {
                 const xv = minX + (rX * i) / steps;
-                pts.push(new THREE.Vector3(sx(xv), sy(m * xv + bCoef), 0));
+                
+                // 1. Por defecto, calcula el punto como una línea recta
+                let yv = m * xv + bCoef; 
+                
+                // 2. Si detecta que es el modelo logístico, cambia el cálculo a la fórmula de la curva en "S"
+                if (isLogistic) {
+                  yv = 1 / (1 + Math.exp(-(m * xv + bCoef)));
+                }
+                
+                pts.push(new THREE.Vector3(sx(xv), sy(yv), 0));
               }
               if (pts.length > 1) lineGeometry.setFromPoints(pts);
             }
 
-            // ✅ Interpolación fluida de la posición de la cámara basada en el zoom actual
             camera.position.z += (zoom.current - camera.position.z) * 0.2;
             camera.lookAt(0, 0, 0);
             
