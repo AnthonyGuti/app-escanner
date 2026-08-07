@@ -5,7 +5,7 @@ import { ActivityIndicator, Modal, StyleSheet, Text, TouchableOpacity, View } fr
 import Graph3D from '../components/Graph3D';
 import { guardarResultadoEstadistico } from '../services/_databaseService';
 
-// ── CAMBIO CLAVE: Importamos las funciones web que sí entiende Expo Go ──
+// ── Importación de Firebase para Expo Go ─────────────────────────────────
 import { doc, getDoc } from "firebase/firestore";
 import { db } from '../services/firebaseConfig';
 
@@ -15,7 +15,7 @@ interface EjercicioData {
   enunciado_completo: string;
   datos_variable_x: number[];
   datos_variable_y: number[];
-  tipo?: string; // NUEVO: Para saber si es lineal o logístico
+  tipo?: string; // 'linear' o 'logistic'
 }
 
 export default function Scanner() {
@@ -26,10 +26,9 @@ export default function Scanner() {
   const [ejercicio, setEjercicio] = useState<EjercicioData | null>(null);
   const [loading, setLoading] = useState(false);
   
-  // NUEVO: Estado para controlar si el gráfico está en pantalla completa
   const [pantallaCompleta, setPantallaCompleta] = useState(false);
 
-  // ── Descarga el ejercicio con la sintaxis estándar de Expo Go ───────────
+  // ── Descarga el ejercicio desde Firebase ─────────────────────────────────
   useEffect(() => {
     async function obtenerEjercicioFirebase() {
       if (!scannedData) return;
@@ -67,28 +66,59 @@ export default function Scanner() {
   
   const xData: number[] = ejercicio?.datos_variable_x || [];
   const yData: number[] = ejercicio?.datos_variable_y || [];
-  const tipoModelo = ejercicio?.tipo || 'linear'; // Por defecto lineal
+  const tipoModelo = ejercicio?.tipo || 'linear';
 
   const enunciado = ejercicio?.enunciado_completo?.toLowerCase() || "";
   const esIQ      = enunciado.includes("iq") || enunciado.includes("coeficiente");
   const esAnsiedad = enunciado.includes("ansiedad") || enunciado.includes("estres");
 
-  // ── Cálculo de regresión ─────────────────────────────────────────────────
-  const calcularRegresion = (x: number[], y: number[]) => {
+  // ── CÁLCULO DE MODELOS REALES (Lineal vs Regresión Logística) ────────────
+  const calcularModelo = (x: number[], y: number[], tipo: string) => {
     const n = x.length;
-    if (n < 2) return null;
-    const sumX  = x.reduce((a, b) => a + b, 0);
-    const sumY  = y.reduce((a, b) => a + b, 0);
-    const sumXY = x.reduce((a, v, i) => a + v * y[i], 0);
-    const sumX2 = x.reduce((a, v) => a + v * v, 0);
-    const denom = n * sumX2 - sumX * sumX;
-    if (denom === 0) return null;
-    const m = (n * sumXY - sumX * sumY) / denom;
-    const b = (sumY - m * sumX) / n;
-    return { m, b };
+    if (n < 2) return { m: 0, b: 0 };
+
+    if (tipo === 'logistic') {
+      // Regresión Logística real mediante Gradiente Descendente (Logit)
+      const minY = Math.min(...y);
+      const maxY = Math.max(...y);
+      const rangeY = maxY - minY === 0 ? 1 : maxY - minY;
+      
+      let b = 0; // Intercepto
+      let m = 0; // Pendiente
+      const lr = 0.05;
+      const epochs = 2000;
+      
+      for (let epoch = 0; epoch < epochs; epoch++) {
+        let db = 0;
+        let dm = 0;
+        for (let i = 0; i < n; i++) {
+          const yiNorm = (y[i] - minY) / rangeY;
+          const z = m * x[i] + b;
+          const zClamped = Math.max(Math.min(z, 35), -35);
+          const p = 1 / (1 + Math.exp(-zClamped));
+          const error = p - yiNorm;
+          db += error;
+          dm += error * x[i];
+        }
+        b -= (lr * db) / n;
+        m -= (lr * dm) / n;
+      }
+      return { m, b };
+    } else {
+      // Regresión Lineal Ordinaria (Mínimos Cuadrados)
+      const sumX  = x.reduce((a, b) => a + b, 0);
+      const sumY  = y.reduce((a, b) => a + b, 0);
+      const sumXY = x.reduce((a, v, i) => a + v * y[i], 0);
+      const sumX2 = x.reduce((a, v) => a + v * v, 0);
+      const denom = n * sumX2 - sumX * sumX;
+      if (denom === 0) return { m: 0, b: 0 };
+      const m = (n * sumXY - sumX * sumY) / denom;
+      const b = (sumY - m * sumX) / n;
+      return { m, b };
+    }
   };
 
-  const regresion = calcularRegresion(xData, yData);
+  const resultadoModelo = calcularModelo(xData, yData, tipoModelo);
 
   // ── Análisis interpretativo ──────────────────────────────────────────────
   const generarAnalisis = useCallback(
@@ -112,7 +142,7 @@ export default function Scanner() {
       }
 
       if (tipoModelo === 'logistic') {
-         return { icono: '⚡', color: '#00e5ff', texto: 'Modelo Logístico detectado. La curva en S predice la probabilidad de que el evento ocurra basándose en los datos.' };
+         return { icono: '⚡', color: '#00e5ff', texto: 'Modelo Logístico calculado por máxima verosimilitud. La curva en S predice la probabilidad del evento.' };
       }
 
       if (m > 0) return { icono: '📈', color: '#00e5ff', texto: 'La recta de ajuste es creciente: cuando X aumenta, Y también tiende a subir.' };
@@ -124,22 +154,21 @@ export default function Scanner() {
 
   // ── Guardado automático del historial ────────────────────────────────────
   useEffect(() => {
-    if (!regresion || !scannedData || !ejercicio) return;
-    const infoAnalisis = generarAnalisis(regresion.m);
+    if (!resultadoModelo || !scannedData || !ejercicio) return;
+    const infoAnalisis = generarAnalisis(resultadoModelo.m);
     
     guardarResultadoEstadistico(scannedData, {
       enunciado: ejercicio.enunciado_completo,
       x:         xData,
       y:         yData,
-      m:         regresion.m,
-      b:         regresion.b,
+      m:         resultadoModelo.m,
+      b:         resultadoModelo.b,
       analisis:  infoAnalisis.texto,
       qr:        scannedData,
-      tipo:      tipoModelo // <--- ¡AÑADE ESTA LÍNEA!
+      tipo:      tipoModelo
     });
-  }, [regresion, scannedData, generarAnalisis, ejercicio, tipoModelo]);
+  }, [resultadoModelo, scannedData, generarAnalisis, ejercicio, tipoModelo]);
 
-  // Iconos para los botones de expandir y minimizarr
   const IconoExpandir = () => (
     <View style={iconStyles.wrapper}>
       <View style={[iconStyles.corner, { top: 0, left: 0, borderTopWidth: 3, borderLeftWidth: 3 }]} />
@@ -158,7 +187,6 @@ export default function Scanner() {
     </View>
   );
 
-  // ── Permisos de cámara ───────────────────────────────────────────────────
   if (!permission?.granted) {
     return (
       <View style={styles.center}>
@@ -187,7 +215,7 @@ export default function Scanner() {
           <View style={styles.glassCard}>
             <ActivityIndicator size="large" color="#00e5ff" />
             <Text style={[styles.subNote, { marginTop: 15 }]}>Conectando con Firebase...</Text>
-            <Text style={styles.whiteText}>Procesando ejercicio...</Text>
+            <Text style={styles.whiteText}>Calculando modelo estadístico...</Text>
           </View>
         </View>
       )}
@@ -213,7 +241,7 @@ export default function Scanner() {
         >
           <View style={styles.zoomWrapper}>
 
-            {/* 1. GRÁFICA GIGANTE AL INICIO */}
+            {/* 1. GRÁFICA 3D */}
             <View style={[styles.floatingGraphWrapper, styles.perspectiveGraph]}>
               {!pantallaCompleta && (
                  <Graph3D xData={xData} yData={yData} type={tipoModelo as "linear"|"logistic"} transparente={true} />
@@ -228,9 +256,9 @@ export default function Scanner() {
               </TouchableOpacity>
             </View>
 
-            {/* 2. ANÁLISIS EN EL MEDIO */}
-            {regresion && (() => {
-              const analisis = generarAnalisis(regresion.m);
+            {/* 2. ANÁLISIS */}
+            {resultadoModelo && (() => {
+              const analisis = generarAnalisis(resultadoModelo.m);
               return (
                 <View style={[styles.glassPanel, styles.perspectiveRight, styles.analysisBox, { borderColor: analisis.color + '55', marginTop: 15 }]}>
                   <Text style={[styles.analysisTitle, { color: analisis.color }]}>
@@ -241,12 +269,28 @@ export default function Scanner() {
               );
             })()}
 
-            {/* 3. FÓRMULA AL FINAL */}
-            {regresion && (
+            {/* 3. FÓRMULA REAL CALCULADA */}
+            {resultadoModelo && (
               <View style={[styles.glassPanel, styles.perspectiveLeft, { marginTop: 15, marginBottom: 5 }]}>
-                <Text style={styles.equationValue}>
-                  {tipoModelo === 'logistic' ? 'Y = f(X)' : `Y = ${regresion.m.toFixed(2)}X + ${regresion.b.toFixed(2)}`}
-                </Text>
+                {tipoModelo === 'logistic' ? (() => {
+                  const mStr = `${resultadoModelo.m >= 0 ? '' : '-'}${Math.abs(resultadoModelo.m).toFixed(2)}X`;
+                  const bStr = `${resultadoModelo.b >= 0 ? '+ ' + resultadoModelo.b.toFixed(2) : '- ' + Math.abs(resultadoModelo.b).toFixed(2)}`;
+                  const exponente = `${mStr} ${bStr}`;
+                  return (
+                    <View style={styles.fractionContainer}>
+                      <Text style={styles.fractionP}>P(X) = </Text>
+                      <View style={styles.fractionInner}>
+                        <Text style={styles.fractionNumerator}>e^({exponente})</Text>
+                        <View style={styles.fractionLine} />
+                        <Text style={styles.fractionDenominator}>1 + e^({exponente})</Text>
+                      </View>
+                    </View>
+                  );
+                })() : (
+                  <Text style={styles.equationValue}>
+                    Y = {resultadoModelo.m.toFixed(2)}X + {resultadoModelo.b.toFixed(2)}
+                  </Text>
+                )}
               </View>
             )}
 
@@ -284,49 +328,48 @@ export default function Scanner() {
   );
 }
 
-// Estilos de los iconos
 const iconStyles = StyleSheet.create({
   wrapper: { width: 20, height: 20, position: 'relative' },
   corner: { position: 'absolute', width: 8, height: 8, borderColor: '#ffffff' },
 });
 
 const styles = StyleSheet.create({
-  container:            { flex: 1, backgroundColor: 'transparent' }, 
-  center:               { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#000' },
-  whiteText:            { color: 'white', marginBottom: 20 },
-  glassCard:            { backgroundColor: 'rgba(10, 10, 30, 0.8)', padding: 25, borderRadius: 30, alignItems: 'center', width: '85%', borderWidth: 1.5, borderColor: 'rgba(0, 229, 255, 0.4)' },
-  glassPanel:           { backgroundColor: 'rgba(15, 20, 45, 0.85)', padding: 15, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.15)' },
-  arHudContainer:       { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center', zIndex: 5 }, 
-  zoomWrapper:          { width: '100%', paddingHorizontal: 15, transform: [{ scale: 0.88 }, { perspective: 1000 }] },
-  perspectiveCard:      { transform: [{ perspective: 1000 }, { rotateX: '5deg' }] },
-  perspectiveLeft:      { transform: [{ perspective: 1000 }, { rotateY: '8deg' }] },
-  perspectiveRight:     { transform: [{ perspective: 1000 }, { rotateY: '-8deg' }] },
-  perspectiveGraph:     { transform: [{ perspective: 1000 }, { rotateX: '10deg' }] },
-  fullOverlay:          { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center', zIndex: 10, backgroundColor: 'rgba(0,0,0,0.4)' }, 
-  qrGuide:              { width: 180, height: 180, borderWidth: 2, borderColor: '#00e5ff', borderStyle: 'dashed', borderRadius: 20, marginVertical: 15 },
-  stepTag:              { color: '#00e5ff', fontSize: 10, fontWeight: 'bold', letterSpacing: 2 },
-  glassTitle:           { color: 'white', fontSize: 20, fontWeight: 'bold' },
-  subNote:              { color: 'white', fontSize: 12, opacity: 0.7, textAlign: 'center', marginTop: 5 },
-  exerciseHeader:       { color: '#00e5ff', fontSize: 16, fontWeight: 'bold' },
-  exerciseText:         { color: 'white', fontSize: 11, lineHeight: 14 },
-  sectionHeader:        { color: '#B39DDB', fontSize: 12, fontWeight: 'bold', marginBottom: 5, textAlign: 'center' },
-  arTable:              { borderRadius: 10, backgroundColor: 'rgba(0, 0, 0, 0.3)' },
-  arTableRow:           { flexDirection: 'row', borderBottomWidth: 0.5, borderBottomColor: 'rgba(255,255,255,0.1)', padding: 6 },
-  arCell:               { flex: 1, color: '#E0E0E0', textAlign: 'center', fontSize: 11 },
-  // AQUÍ ESTÁ EL CAMBIO DE TAMAÑO: Pasó de 380 a 480 de altura
-  floatingGraphWrapper: { height: 480, width: '100%', backgroundColor: 'rgba(10, 10, 30, 0.3)', borderRadius: 30, borderWidth: 2, borderColor: 'rgba(0, 229, 255, 0.7)', overflow: 'hidden' }, 
-  hintCloud:            { position: 'absolute', top: 20, alignSelf: 'center', backgroundColor: 'rgba(0, 229, 255, 0.3)', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: '#00e5ff' },
-  hintText:             { color: '#00e5ff', fontSize: 12, fontWeight: 'bold' },
-  equationValue:        { color: '#00e5ff', fontSize: 24, fontWeight: 'bold', textAlign: 'center', textShadowColor: '#00e5ff', textShadowRadius: 10 },
-  analysisBox:          { marginTop: 8, backgroundColor: 'rgba(10, 10, 30, 0.9)', borderWidth: 1 },
-  analysisTitle:        { fontSize: 13, fontWeight: 'bold', marginBottom: 6, letterSpacing: 1 },
-  analysisText:         { color: '#E0E0E0', fontSize: 13, lineHeight: 19 },
-  btnResetGlass:        { backgroundColor: 'rgba(255, 112, 67, 0.8)', padding: 12, borderRadius: 15, alignItems: 'center', marginTop: 10 },
-  backBtnGlass:         { position: 'absolute', top: 50, left: 20, backgroundColor: 'rgba(255, 255, 255, 0.2)', padding: 10, borderRadius: 12, zIndex: 200 },
-  btnOrange:            { backgroundColor: '#FF7043', padding: 15, borderRadius: 10 },
-  btnText:              { color: 'white', fontWeight: 'bold' },
+  container:             { flex: 1, backgroundColor: 'transparent' }, 
+  center:                { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#000' },
+  whiteText:             { color: 'white', marginBottom: 20 },
+  glassCard:             { backgroundColor: 'rgba(10, 10, 30, 0.8)', padding: 25, borderRadius: 30, alignItems: 'center', width: '85%', borderWidth: 1.5, borderColor: 'rgba(0, 229, 255, 0.4)' },
+  glassPanel:            { backgroundColor: 'rgba(15, 20, 45, 0.85)', padding: 15, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.15)' },
+  arHudContainer:        { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center', zIndex: 5 }, 
+  zoomWrapper:           { width: '100%', paddingHorizontal: 15, transform: [{ scale: 0.88 }, { perspective: 1000 }] },
+  perspectiveCard:       { transform: [{ perspective: 1000 }, { rotateX: '5deg' }] },
+  perspectiveLeft:       { transform: [{ perspective: 1000 }, { rotateY: '8deg' }] },
+  perspectiveRight:      { transform: [{ perspective: 1000 }, { rotateY: '-8deg' }] },
+  perspectiveGraph:      { transform: [{ perspective: 1000 }, { rotateX: '10deg' }] },
+  fullOverlay:           { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center', zIndex: 10, backgroundColor: 'rgba(0,0,0,0.4)' }, 
+  qrGuide:               { width: 180, height: 180, borderWidth: 2, borderColor: '#00e5ff', borderStyle: 'dashed', borderRadius: 20, marginVertical: 15 },
+  stepTag:               { color: '#00e5ff', fontSize: 10, fontWeight: 'bold', letterSpacing: 2 },
+  glassTitle:            { color: 'white', fontSize: 20, fontWeight: 'bold' },
+  subNote:               { color: 'white', fontSize: 12, opacity: 0.7, textAlign: 'center', marginTop: 5 },
+  floatingGraphWrapper:  { height: 480, width: '100%', backgroundColor: 'rgba(10, 10, 30, 0.3)', borderRadius: 30, borderWidth: 2, borderColor: 'rgba(0, 229, 255, 0.7)', overflow: 'hidden' }, 
+  hintCloud:             { position: 'absolute', top: 20, alignSelf: 'center', backgroundColor: 'rgba(0, 229, 255, 0.3)', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: '#00e5ff' },
+  hintText:              { color: '#00e5ff', fontSize: 12, fontWeight: 'bold' },
+  equationValue:         { color: '#00e5ff', fontSize: 16, fontWeight: 'bold', textAlign: 'center', textShadowColor: '#00e5ff', textShadowRadius: 10 },
   
-  /* --- ESTILOS DEL MODAL TRANSPARENTE --- */
+  fractionContainer:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  fractionP:             { color: '#00e5ff', fontSize: 16, fontWeight: 'bold', marginRight: 8, textShadowColor: '#00e5ff', textShadowRadius: 10 },
+  fractionInner:         { alignItems: 'center', flex: 1 },
+  fractionNumerator:     { color: '#00e5ff', fontSize: 13, fontWeight: 'bold', textAlign: 'center', textShadowColor: '#00e5ff', textShadowRadius: 8 },
+  fractionLine:          { width: '100%', height: 1.5, backgroundColor: '#00e5ff', marginVertical: 4 },
+  fractionDenominator:   { color: '#00e5ff', fontSize: 13, fontWeight: 'bold', textAlign: 'center', textShadowColor: '#00e5ff', textShadowRadius: 8 },
+
+  analysisBox:           { marginTop: 8, backgroundColor: 'rgba(10, 10, 30, 0.9)', borderWidth: 1 },
+  analysisTitle:         { fontSize: 13, fontWeight: 'bold', marginBottom: 6, letterSpacing: 1 },
+  analysisText:          { color: '#E0E0E0', fontSize: 13, lineHeight: 19 },
+  btnResetGlass:         { backgroundColor: 'rgba(255, 112, 67, 0.8)', padding: 12, borderRadius: 15, alignItems: 'center', marginTop: 10 },
+  backBtnGlass:          { position: 'absolute', top: 50, left: 20, backgroundColor: 'rgba(255, 255, 255, 0.2)', padding: 10, borderRadius: 12, zIndex: 200 },
+  btnOrange:             { backgroundColor: '#FF7043', padding: 15, borderRadius: 10 },
+  btnText:               { color: 'white', fontWeight: 'bold' },
+  
   btnExpand: { 
     position: 'absolute', 
     top: 10, 

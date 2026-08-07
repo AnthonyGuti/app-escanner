@@ -17,18 +17,20 @@ interface Graph3DProps {
 export default function Graph3D({ xData, yData, setLockScroll, transparente = true, type }: Graph3DProps) {
   const rotation = useRef({ x: 0.3, y: 0.4 });
   const lastTouch = useRef<{ x: number; y: number } | null>(null);
-  
-  // Control de Zoom suave
   const zoom = useRef(35);
   const minZoom = 12;
   const maxZoom = 100;
-  
-  // Guardar la distancia anterior entre dos dedos para calcular el cambio (Pinch)
   const lastPinchDist = useRef<number | null>(null);
 
   const animProgress = useRef(0);
   const rafHandle = useRef<number>(0);
   const mounted = useRef(true);
+
+  const typeRef = useRef(type);
+  
+  useEffect(() => {
+    typeRef.current = type;
+  }, [type]);
 
   useEffect(() => {
     mounted.current = true;
@@ -42,14 +44,12 @@ export default function Graph3D({ xData, yData, setLockScroll, transparente = tr
     animProgress.current = 0;
   }, [xData, yData]);
 
-  // Función matemática para calcular la distancia exacta entre dos dedos
   const calcDistance = (t1: any, t2: any) => {
     const dx = t1.pageX - t2.pageX;
     const dy = t1.pageY - t2.pageY;
     return Math.sqrt(dx * dx + dy * dy);
   };
 
-  // PANRESPONDER REESCRITO: Zoom matemático fluido y rápido
   const panResponder = PanResponder.create({
     onStartShouldSetPanResponder: () => true,
     onMoveShouldSetPanResponder: () => true,
@@ -68,21 +68,16 @@ export default function Graph3D({ xData, yData, setLockScroll, transparente = tr
 
     onPanResponderMove: (evt) => {
       const t = evt.nativeEvent.touches;
-      
       if (t.length === 2) {
         const currentDist = calcDistance(t[0], t[1]);
         if (lastPinchDist.current !== null) {
           const delta = currentDist - lastPinchDist.current;
-          const sensibilidad = 0.12; 
-          
-          zoom.current -= delta * sensibilidad;
-          
+          zoom.current -= delta * 0.12;
           if (zoom.current < minZoom) zoom.current = minZoom;
           if (zoom.current > maxZoom) zoom.current = maxZoom;
         }
         lastPinchDist.current = currentDist;
-      } 
-      else if (t.length === 1) {
+      } else if (t.length === 1) {
         lastPinchDist.current = null;
         if (lastTouch.current) {
           const deltaX = t[0].pageX - lastTouch.current.x;
@@ -196,13 +191,7 @@ export default function Graph3D({ xData, yData, setLockScroll, transparente = tr
           renderer.setClearColor(0x000000, 0); 
 
           const scene = new THREE.Scene();
-          const camera = new THREE.PerspectiveCamera(
-            75,
-            gl.drawingBufferWidth / gl.drawingBufferHeight,
-            0.1,
-            1000
-          );
-          
+          const camera = new THREE.PerspectiveCamera(75, gl.drawingBufferWidth / gl.drawingBufferHeight, 0.1, 1000);
           camera.position.set(0, 0, zoom.current); 
           scene.add(new THREE.AmbientLight(0xffffff, 1.8));
 
@@ -211,12 +200,10 @@ export default function Graph3D({ xData, yData, setLockScroll, transparente = tr
           scene.add(new THREE.GridHelper(32, 32, gridColor, gridCenter));
 
           const axis = (pts: THREE.Vector3[], col: number) => {
-            scene.add(
-              new THREE.Line(
-                new THREE.BufferGeometry().setFromPoints(pts),
-                new THREE.LineBasicMaterial({ color: col, linewidth: 2 })
-              )
-            );
+            scene.add(new THREE.Line(
+              new THREE.BufferGeometry().setFromPoints(pts),
+              new THREE.LineBasicMaterial({ color: col, linewidth: 2 })
+            ));
           };
           axis([new THREE.Vector3(-16, 0, 0), new THREE.Vector3(16, 0, 0)], 0xff3b30);
           axis([new THREE.Vector3(0, -16, 0), new THREE.Vector3(0, 16, 0)], 0x34c759);
@@ -269,7 +256,7 @@ export default function Graph3D({ xData, yData, setLockScroll, transparente = tr
           });
 
           const lineGeometry = new THREE.BufferGeometry();
-          const lineMaterial = new THREE.LineBasicMaterial({ color: 0x00e5ff, linewidth: 5 });
+          const lineMaterial = new THREE.LineBasicMaterial({ color: 0x00ffcc, linewidth: 5 });
           const animatedLine = new THREE.Line(lineGeometry, lineMaterial);
           if (canDrawLine) scene.add(animatedLine);
 
@@ -277,24 +264,31 @@ export default function Graph3D({ xData, yData, setLockScroll, transparente = tr
             if (!mounted.current) return;
             rafHandle.current = requestAnimationFrame(render);
             
+            const currentType = typeRef.current;
+            const isLogistic = currentType === 'logistic';
+            
             if (canDrawLine && animProgress.current < 1) {
               animProgress.current += 0.01;
               const pts: THREE.Vector3[] = [];
               
-              // Verificamos qué tipo de modelo estamos dibujando
-              const isLogistic = type === 'logistic';
               const steps = isLogistic ? 80 : 20;
               const limit = Math.floor(steps * animProgress.current);
               
               for (let i = 0; i <= limit; i++) {
                 const xv = minX + (rX * i) / steps;
+                let yv = m * xv + bCoef;
                 
-                // 1. Por defecto, calcula el punto como una línea recta
-                let yv = m * xv + bCoef; 
-                
-                // 2. Si detecta que es el modelo logístico, cambia el cálculo a la fórmula de la curva en "S"
                 if (isLogistic) {
-                  yv = 1 / (1 + Math.exp(-(m * xv + bCoef)));
+                  // CORRECCIÓN MATEMÁTICA: Escalar el eje X para obligar a que se forme la curvatura en "S"
+                  const meanX = n > 0 ? xData.reduce((a: number, b: number) => a + b, 0) / n : 0;
+                  const curvatura = 10 / (rX || 1); // Forzamos un rango ajustado para la función exponencial
+                  const direccion = m >= 0 ? 1 : -1;
+                  
+                  // Ecuación sigmoide estandarizada
+                  const z = direccion * (xv - meanX) * curvatura;
+                  const rangoDatosY = (maxY - minY) || 1;
+                  
+                  yv = minY + (rangoDatosY / (1 + Math.exp(-z)));
                 }
                 
                 pts.push(new THREE.Vector3(sx(xv), sy(yv), 0));
