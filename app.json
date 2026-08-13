@@ -11,7 +11,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.anthony.appra",
-      "buildNumber": "3",
+      "buildNumber": "4",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "Esta aplicación requiere acceso a la cámara para escanear los marcadores y códigos QR que activan las visualizaciones de modelos estadísticos en realidad aumentada.",
