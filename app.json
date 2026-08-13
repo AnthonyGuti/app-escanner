@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "App",
+    "name": "Estadística 3D",
     "slug": "App",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -9,7 +9,14 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false,
+      "bundleIdentifier": "com.anthony.appra",
+      "buildNumber": "3",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "Esta aplicación requiere acceso a la cámara para escanear los marcadores y códigos QR que activan las visualizaciones de modelos estadísticos en realidad aumentada.",
+        "NSMicrophoneUsageDescription": "Esta aplicación requiere acceso al micrófono únicamente para grabar audio durante las explicaciones e interacciones de realidad aumentada."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -20,7 +27,11 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.anthony.appra"
+      "package": "com.anthony.appra",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "output": "static",
@@ -43,13 +54,18 @@
       [
         "expo-asset",
         {
-          "platforms": ["ios", "android", "web"]
+          "platforms": [
+            "ios",
+            "android",
+            "web"
+          ]
         }
       ],
       [
         "expo-camera",
         {
-          "cameraPermission": "Permite a AppRA usar la cámara para escanear los códigos QR de los ejercicios estadísticos."
+          "cameraPermission": "Esta aplicación requiere acceso a la cámara para escanear los marcadores y códigos QR que activan las visualizaciones de modelos estadísticos en realidad aumentada.",
+          "microphonePermission": "Esta aplicación requiere acceso al micrófono únicamente para grabar audio durante las explicaciones e interacciones de realidad aumentada."
         }
       ]
     ],

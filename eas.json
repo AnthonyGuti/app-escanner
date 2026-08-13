@@ -1,13 +1,18 @@
 {
   "build": {
-    "preview": {
-      "android": {
-        "buildType": "apk"
-      }
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
     },
-    "production": {}
+    "preview": {
+      "distribution": "internal"
+    },
+    "production": {
+      "autoIncrement": true,
+      "releaseChannel": "default"
+    }
   },
-  "submit": {
-    "production": {}
+  "cli": {
+    "appVersionSource": "remote"
   }
 }
