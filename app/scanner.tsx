@@ -192,7 +192,7 @@ export default function Scanner() {
       <View style={styles.center}>
         <Text style={styles.whiteText}>Solicitando acceso a la cámara...</Text>
         <TouchableOpacity style={styles.btnOrange} onPress={requestPermission}>
-          <Text style={styles.btnText}>DAR PERMISO</Text>
+          <Text style={styles.btnText}>Continuar</Text>
         </TouchableOpacity>
       </View>
     );
